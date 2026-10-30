@@ -14,13 +14,294 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      campaign_enrollments: {
+        Row: {
+          campaign_type: string
+          created_at: string
+          delivery_address: string
+          id: string
+          name: string
+          platform: string
+          status: string
+          tracking_order_id: string
+          user_id: string
+        }
+        Insert: {
+          campaign_type: string
+          created_at?: string
+          delivery_address: string
+          id?: string
+          name: string
+          platform: string
+          status?: string
+          tracking_order_id: string
+          user_id?: string
+        }
+        Update: {
+          campaign_type?: string
+          created_at?: string
+          delivery_address?: string
+          id?: string
+          name?: string
+          platform?: string
+          status?: string
+          tracking_order_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          campaign_link: string
+          created_at: string
+          created_by: string | null
+          id: string
+          incentive_amount: number
+          is_active: boolean
+          name: string
+          platform: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_link: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          incentive_amount: number
+          is_active?: boolean
+          name: string
+          platform: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_link?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          incentive_amount?: number
+          is_active?: boolean
+          name?: string
+          platform?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          access_status: string
+          created_at: string
+          device_fingerprint: string | null
+          display_name: string | null
+          email: string
+          id: string
+          mobile_number: string | null
+          onboarding_complete: boolean
+          role: string
+          sign_up_ip: unknown
+          updated_at: string
+        }
+        Insert: {
+          access_status?: string
+          created_at?: string
+          device_fingerprint?: string | null
+          display_name?: string | null
+          email: string
+          id: string
+          mobile_number?: string | null
+          onboarding_complete?: boolean
+          role?: string
+          sign_up_ip?: unknown
+          updated_at?: string
+        }
+        Update: {
+          access_status?: string
+          created_at?: string
+          device_fingerprint?: string | null
+          display_name?: string | null
+          email?: string
+          id?: string
+          mobile_number?: string | null
+          onboarding_complete?: boolean
+          role?: string
+          sign_up_ip?: unknown
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      refunds: {
+        Row: {
+          campaign_type: string
+          created_at: string
+          enrollment_id: string | null
+          id: string
+          name: string
+          platform: string
+          proof_filename: string | null
+          status: string
+          upi_id: string
+          user_id: string
+        }
+        Insert: {
+          campaign_type: string
+          created_at?: string
+          enrollment_id?: string | null
+          id?: string
+          name: string
+          platform: string
+          proof_filename?: string | null
+          status?: string
+          upi_id: string
+          user_id?: string
+        }
+        Update: {
+          campaign_type?: string
+          created_at?: string
+          enrollment_id?: string | null
+          id?: string
+          name?: string
+          platform?: string
+          proof_filename?: string | null
+          status?: string
+          upi_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_verifications: {
+        Row: {
+          created_at: string
+          enrollment_id: string | null
+          id: string
+          media_path: string
+          status: string
+          upi_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enrollment_id?: string | null
+          id?: string
+          media_path: string
+          status?: string
+          upi_id: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          enrollment_id?: string | null
+          id?: string
+          media_path?: string
+          status?: string
+          upi_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_verifications_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      complete_partner_onboarding: {
+        Args: {
+          p_device_fingerprint?: string
+          p_display_name: string
+          p_mobile_number: string
+          p_sign_up_ip?: unknown
+        }
+        Returns: {
+          access_status: string
+          created_at: string
+          device_fingerprint: string | null
+          display_name: string | null
+          email: string
+          id: string
+          mobile_number: string | null
+          onboarding_complete: boolean
+          role: string
+          sign_up_ip: unknown
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      is_super_admin: { Args: { _uid: string }; Returns: boolean }
+      list_admin_profiles: {
+        Args: never
+        Returns: {
+          access_status: string
+          created_at: string
+          device_fingerprint: string | null
+          display_name: string | null
+          email: string
+          id: string
+          mobile_number: string | null
+          onboarding_complete: boolean
+          role: string
+          sign_up_ip: unknown
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      save_campaign: {
+        Args: {
+          p_campaign_id?: string
+          p_incentive: number
+          p_link: string
+          p_name: string
+          p_platform: string
+        }
+        Returns: {
+          campaign_link: string
+          created_at: string
+          created_by: string | null
+          id: string
+          incentive_amount: number
+          is_active: boolean
+          name: string
+          platform: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "campaigns"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_user_access_status: {
+        Args: { p_status: string; p_user_id: string }
+        Returns: undefined
+      }
+      toggle_campaign_active: {
+        Args: { p_campaign_id: string; p_is_active: boolean }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
