@@ -1,24 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { BarterApp } from "@/components/app/BarterApp";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "BarterKartale — Influencer Collaboration & Brand Promotion Network" },
+      { name: "description", content: "Discover product sponsorships and beta-testing campaigns across Amazon, Flipkart, Myntra and Meesho. Zero followers required." },
+      { property: "og:title", content: "BarterKartale — Creator Commerce, Reimagined" },
+      { property: "og:description", content: "Product sponsorships and campaigns with India's premier influencer collaboration network." },
+    ],
+  }),
+  component: () => <BarterApp initialView="home" />,
 });
-
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
