@@ -32,8 +32,8 @@ const feed = [
   { icon: 'L', title: 'Luma skincare set', meta: 'Myntra · Bengaluru', earning: '₹280', time: '21 min ago' },
 ];
 
-function App() {
-  const [view, setView] = useState<View>(() => window.location.pathname === '/partner-console' ? 'console' : window.location.pathname === '/dashboard' ? 'dashboard' : window.location.pathname === '/super-admin' ? 'superadmin' : 'home');
+export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
+  const [view, setView] = useState<View>(initialView);
   const [menuOpen, setMenuOpen] = useState(false);
   const [category, setCategory] = useState<CampaignCategory>('All');
   const [consoleOpen, setConsoleOpen] = useState(false);
@@ -322,4 +322,4 @@ function RefundModal({ orders, initialOrderId, onClose, onSubmit }: { orders: Or
   };
   return <div className="modal-backdrop" onMouseDown={onClose}><div className="form-modal" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose}><X size={18} /></button><div className="section-kicker">REFUND FORM</div><h2>Fill Refund <em>form.</em></h2><p>Details from your matching order fill in automatically. Edit any field before you submit.</p>{orders.length === 0 ? <div className="empty-state"><PackageCheck size={30} /><strong>No order form on file</strong><p>Fill an order form first. The refund form uses the details from that order.</p></div> : <><div className="form-grid"><label className="wide">Order ID<select value={selectedId} onChange={(event) => chooseOrder(event.target.value)}>{orders.map((order) => <option key={order.orderId} value={order.orderId}>{order.orderId} · {order.platform}</option>)}</select></label><label>Your name<input value={valueOf('name')} onChange={(event) => override('name', event.target.value)} placeholder="Full name" /></label><label>Platform<select value={valueOf('platform')} onChange={(event) => override('platform', event.target.value)}>{PLATFORMS.map((platform) => <option key={platform}>{platform}</option>)}</select></label><label>Deal type<select value={valueOf('deal')} onChange={(event) => override('deal', event.target.value)}>{DEALS.map((deal) => <option key={deal}>{deal}</option>)}</select></label><label>UPI ID for payout<input value={upi} onChange={(event) => setUpi(event.target.value)} placeholder="name@upi" /></label></div><label>Supporting proof<div className="upload-box"><Upload size={20} /><strong>{file || 'Drop your file here'}</strong><span>PNG, JPG or MP4 · max 20MB</span><input type="file" accept="image/png,image/jpeg,video/mp4" onChange={onFile} /></div></label><button className="primary-button full-button" disabled={!upi.trim() || submitting} onClick={handleSubmit}>{submitting ? 'Submitting…' : 'Submit refund form'} <ArrowRight size={16} /></button></>}<small className="form-footnote"><ShieldCheck size={13} /> Only genuine experiences are eligible for payout.</small></div></div>; }
 
-export default App;
+

@@ -47,7 +47,7 @@ export function SuperAdmin({ onSignOut, displayName }: { onSignOut: () => void; 
     setLoading(true);
     const [{ data: campaignData }, { data: userData }] = await Promise.all([
       supabase.from('campaigns').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, email, display_name, mobile_number, role, access_status, sign_up_ip, device_fingerprint, created_at').order('created_at', { ascending: false }),
+      supabase.rpc('list_admin_profiles'),
     ]);
     if (campaignData) setCampaigns(campaignData as Campaign[]);
     if (userData) setUsers(userData as AdminUser[]);

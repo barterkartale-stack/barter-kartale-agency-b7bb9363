@@ -1,21 +1,15 @@
 import { useState, type FormEvent } from 'react';
 import { ArrowRight, BadgeCheck, LockKeyhole, Mail, ShieldCheck, Fingerprint, MapPin, KeyRound, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { lovable } from '@/integrations/lovable/index';
+import { captureIp } from '@/lib/capture-ip.functions';
 
 export type PartnerRole = 'Reviewer' | 'Assistant_Coordinator' | 'Ground_Manager' | 'Super_Admin';
 
 async function captureSignUpIp(): Promise<string | null> {
   try {
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/capture-ip`;
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!response.ok) return null;
-    const data = await response.json() as { ip?: string | null };
-    return data.ip ?? null;
+    const { ip } = await captureIp();
+    return ip;
   } catch {
     return null;
   }
@@ -55,19 +49,15 @@ export function GoogleAccessPanel({ onError }: { onError: (message: string) => v
 
   const continueWithGoogle = async (): Promise<void> => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard` },
-    });
-    if (error) {
+    window.sessionStorage.setItem('bk_after_login', '/dashboard');
+    const result = await lovable.auth.signInWithOAuth('google', { redirect_uri: window.location.origin });
+    if (result.error) {
       setLoading(false);
-      const msg = String(error.message || '');
-      if (msg.includes('Unsupported provider') || msg.includes('provider is not enabled') || error.status === 400 || error.status === 403) {
-        onError('Google Login is initializing. Please configure Client ID/Secret in Supabase Dashboard or use Email Sign In/Sign Up below.');
-      } else {
-        onError('Google sign-in is temporarily unavailable. Please try again.');
-      }
+      onError('Google sign-in is temporarily unavailable. Please try again.');
+      return;
     }
+    if (result.redirected) return;
+    setLoading(false);
   };
 
   return <button className="google-button" onClick={continueWithGoogle} disabled={loading}><span className="google-mark">G</span>{loading ? 'Opening secure sign-in…' : 'Continue with Google'} <ArrowRight size={16} /></button>;
@@ -104,7 +94,7 @@ export function SignUpPanel({ onSuccess, onError }: { onSuccess: () => void; onE
   const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setLoading(true);
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    const { data, error: signUpError } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/dashboard` } });
     if (signUpError || !data.user) {
       setLoading(false);
       onError('Could not create your account. This email may already be registered.');
@@ -138,7 +128,7 @@ export function ForgotPasswordPanel({ onClose, onError }: { onClose: () => void;
     event.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/dashboard`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);
     if (error) {
