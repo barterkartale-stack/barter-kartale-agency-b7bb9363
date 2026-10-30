@@ -34,7 +34,7 @@ export function OrderSearch({ orders, onSearch }: { orders: SearchableOrder[]; o
       setActive((index) => (index <= 0 ? suggestions.length - 1 : index - 1));
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      run(showList && active >= 0 ? suggestions[active].orderId : input);
+      run(showList && active >= 0 ? (suggestions[active]?.orderId ?? input) : input);
     } else if (event.key === 'Escape') {
       setOpen(false);
     }
