@@ -12,7 +12,7 @@ import {
   Search, Upload, Users, WalletCards, X, Zap
 } from 'lucide-react';
 
-type View = 'home' | 'campaigns' | 'about' | 'careers' | 'dashboard' | 'console' | 'superadmin';
+export type View = 'home' | 'campaigns' | 'about' | 'careers' | 'dashboard' | 'console' | 'superadmin';
 type CampaignCategory = 'All' | 'Electronics' | 'Home' | 'Beauty';
 type Order = { name: string; address: string; platform: string; deal: string; orderId: string; status: string };
 
@@ -83,6 +83,8 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
       setOnboarding(true);
     } else {
       setOnboarding(false);
+      const after = window.sessionStorage.getItem('bk_after_login');
+      if (after === '/dashboard') { window.sessionStorage.removeItem('bk_after_login'); window.history.replaceState({}, '', '/dashboard'); setView('dashboard'); }
       if (window.location.pathname === '/dashboard') setView('dashboard');
       if (window.location.pathname === '/super-admin') setView('superadmin');
     }
