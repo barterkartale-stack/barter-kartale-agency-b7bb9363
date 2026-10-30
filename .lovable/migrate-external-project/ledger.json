@@ -1,0 +1,12 @@
+[
+  {"capability":"code","source":"Bolt React/Vite app","outcome":"migrate","status":"done","next_action":"none"},
+  {"capability":"schema","source":"5 Supabase migrations","outcome":"migrate","status":"done","next_action":"none"},
+  {"capability":"records","source":"old database","outcome":"migrate","status":"pending","next_action":"user exports CSV of profiles, campaign_enrollments, refunds, campaigns, task_verifications"},
+  {"capability":"auth identities","source":"old auth users","outcome":"migrate","status":"pending","next_action":"user exports users (id, email)"},
+  {"capability":"authorization","source":"profiles.role + admin RPCs","outcome":"migrate","status":"done","next_action":"none"},
+  {"capability":"google sign-in","source":"Supabase OAuth","outcome":"migrate","status":"done","next_action":"none"},
+  {"capability":"capture-ip edge function","source":"edge function","outcome":"replaced by server function","status":"done","next_action":"none"},
+  {"capability":"uploaded files","source":"none (filenames only)","outcome":"n/a","status":"done","next_action":"none"},
+  {"capability":"secrets","source":"VITE_SUPABASE_*","outcome":"replaced by Cloud","status":"done","next_action":"none"},
+  {"capability":"verification","source":"-","outcome":"-","status":"in_progress","next_action":"end-to-end sign-in test"}
+]
