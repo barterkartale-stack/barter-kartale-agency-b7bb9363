@@ -182,7 +182,7 @@ function CampaignForm({ editing, onClose, onSaved }: { editing: Campaign | null;
       p_platform: platform,
       p_incentive: incentiveNum,
       p_link: link,
-      p_campaign_id: editing?.id ?? undefined,
+      ...(editing?.id ? { p_campaign_id: editing.id } : {}),
     });
     if (rpcError) {
       setError('Could not save the campaign. Please try again.');

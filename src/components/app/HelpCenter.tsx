@@ -38,7 +38,7 @@ const FAQS: FAQItem[] = [
 
 const WHATSAPP_PUBLIC = 'https://chat.whatsapp.com/HEaCIH60fQ9GrgbxWYWizh';
 
-type KnowledgeEntry = { keywords: string[]; response: string; followUps?: string[] };
+type KnowledgeEntry = { keywords: string[]; response: string; followUps?: string[] | undefined };
 
 const KNOWLEDGE: KnowledgeEntry[] = [
   {
@@ -88,7 +88,7 @@ const SUGGESTED_BUTTONS = [
 
 const GREETING = 'Namaste! Main BarterKartale Assistant हूँ। आप कुछ भी पूछ सकते हो — sponsorships, Ret-Earn, referrals, account safety। नीचे दिए buttons click करो या अपना question type करो।';
 
-function findResponse(query: string): { text: string; followUps?: string[] } {
+function findResponse(query: string): { text: string; followUps?: string[] | undefined } {
   const lower = query.toLowerCase();
   for (const entry of KNOWLEDGE) {
     if (entry.keywords.some((kw) => lower.includes(kw.toLowerCase()))) {
