@@ -8,7 +8,7 @@ type ChatMessage = {
   id: number;
   sender: 'bot' | 'user';
   text: string;
-  followUps?: string[];
+  followUps?: string[] | undefined;
 };
 
 type FAQItem = { question: string; answer: string };
