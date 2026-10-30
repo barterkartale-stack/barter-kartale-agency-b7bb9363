@@ -42,7 +42,7 @@ export function SuperAdmin({ onSignOut, displayName }: { onSignOut: () => void; 
       supabase.from('campaigns').select('*').order('created_at', { ascending: false }),
       supabase.rpc('list_admin_profiles'),
     ]);
-    if (campaignData) setCampaigns(campaignData as Campaign[]);
+    if (campaignData) setCampaigns(campaignData as unknown as Campaign[]);
     if (userData) setUsers(userData as AdminUser[]);
     setLoading(false);
   };
