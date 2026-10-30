@@ -5,6 +5,7 @@ import { GoogleAccessPanel, OnboardingPanel, StealthLoginPanel, EmailAccessPanel
 import { OrderSearch, matchesOrder } from '@/components/app/OrderSearch';
 import { SuperAdmin } from '@/components/app/SuperAdmin';
 import { HelpCenter } from '@/components/app/HelpCenter';
+import { CampaignCard, type LiveCampaign } from '@/components/app/CampaignCard';
 import {
   ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronDown, CircleHelp,
   Clock3, FileCheck2, IndianRupee, Layers3, LayoutDashboard, LockKeyhole, LogOut,
@@ -13,24 +14,11 @@ import {
 } from 'lucide-react';
 
 export type View = 'home' | 'campaigns' | 'about' | 'careers' | 'dashboard' | 'console' | 'superadmin';
-type CampaignCategory = 'All' | 'Electronics' | 'Home' | 'Beauty';
+type CampaignCategory = string;
 type Order = { name: string; address: string; platform: string; deal: string; orderId: string; status: string };
 
 const logo = '/assets/images/1003464620.png';
 const retearnLogo = '/assets/images/1003502591.png';
-
-const campaigns = [
-  { brand: 'Bolt Evo', product: 'Evo Air Pro', category: 'Electronics', type: 'Full Sponsorship', value: '₹3,999', reward: 'Keep the product', color: 'mint' },
-  { brand: 'Orient', product: 'Aeroquiet 1200mm Fan', category: 'Home', type: 'Micro-Fee', value: '₹2,499', reward: '₹250 cashback', color: 'sky' },
-  { brand: 'Luma Skin', product: 'Barrier Repair Set', category: 'Beauty', type: 'Full Sponsorship', value: '₹1,899', reward: 'Keep the product', color: 'peach' },
-  { brand: 'Sonic', product: 'Flow ANC Headphones', category: 'Electronics', type: 'Micro-Fee', value: '₹4,499', reward: '₹400 cashback', color: 'lime' },
-];
-
-const feed = [
-  { icon: 'E', title: 'Bolt Evo earbuds', meta: 'Amazon · New Delhi', earning: '₹320', time: 'Just now' },
-  { icon: 'O', title: 'Orient tower cooler', meta: 'Flipkart · Pune', earning: '₹400', time: '8 min ago' },
-  { icon: 'L', title: 'Luma skincare set', meta: 'Myntra · Bengaluru', earning: '₹280', time: '21 min ago' },
-];
 
 export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
   const [view, setView] = useState<View>(initialView);
@@ -44,6 +32,11 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
   const [onboarding, setOnboarding] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [toast, setToast] = useState('');
+  const [liveCampaigns, setLiveCampaigns] = useState<LiveCampaign[]>([]);
+
+  useEffect(() => {
+    void supabase.from('campaigns').select('*').eq('is_active', true).order('created_at', { ascending: false }).then(({ data }) => { if (data) setLiveCampaigns(data as unknown as LiveCampaign[]); });
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -206,8 +199,8 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
       </header>
 
       <main>
-        {view === 'home' && <Home onExplore={() => goTo('campaigns')} onStart={() => goTo('campaigns')} onGoogle={openGoogle} onConsole={openConsole} />}
-        {view === 'campaigns' && <Campaigns category={category} setCategory={setCategory} onBook={() => goTo('home')} />}
+        {view === 'home' && <Home campaigns={liveCampaigns} onExplore={() => goTo('campaigns')} onStart={() => goTo('campaigns')} onGoogle={openGoogle} onConsole={openConsole} />}
+        {view === 'campaigns' && <Campaigns campaigns={liveCampaigns} category={category} setCategory={setCategory} onBook={() => goTo('home')} />}
         {view === 'about' && <About />}
         {view === 'careers' && <Careers onSubmit={() => setToast('Application saved. Our team will review your profile shortly.')} />}
         {view === 'dashboard' && onDashboard && <PublicDashboard orders={orders} onOrder={submitOrder} onRefund={submitRefund} onSignOut={handleSignOut} displayName={profile!.display_name || session!.user.email || 'Partner'} />}
@@ -230,7 +223,7 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
   );
 }
 
-function Home({ onExplore, onStart, onGoogle, onConsole }: { onExplore: () => void; onStart: () => void; onGoogle: () => void; onConsole: () => void }) {
+function Home({ campaigns, onExplore, onStart, onGoogle, onConsole }: { campaigns: LiveCampaign[]; onExplore: () => void; onStart: () => void; onGoogle: () => void; onConsole: () => void }) {
   return <>
     <section className="hero section-wrap">
       <div className="hero-copy">
@@ -242,24 +235,24 @@ function Home({ onExplore, onStart, onGoogle, onConsole }: { onExplore: () => vo
       </div>
       <div className="hero-visual">
         <div className="visual-orbit orbit-one" /><div className="visual-orbit orbit-two" />
-        <div className="hero-card main-product"><div className="product-top"><span>LIVE DROP · 04</span><span className="green-pill">OPEN</span></div><div className="earbuds"><span /><span /></div><p>Bolt Evo Air Pro</p><strong>₹3,999 value</strong><small>Full sponsorship campaign</small><div className="card-progress"><i /></div><div className="card-footer"><span>42 slots left</span><span>Ends in 2d 08h</span></div></div>
+        {campaigns[0] ? <div className="hero-card main-product"><div className="product-top"><span>LIVE DROP · {String(campaigns.length).padStart(2, '0')}</span><span className="green-pill">OPEN</span></div>{campaigns[0].image_url ? <img className="hero-product-photo" src={campaigns[0].image_url} alt={campaigns[0].name} /> : <div className="earbuds"><span /><span /></div>}<p>{campaigns[0].name}</p>{campaigns[0].product_value && <strong>{campaigns[0].product_value} value</strong>}<small>{campaigns[0].platform} · {campaigns[0].category}</small><div className="card-progress"><i /></div><div className="card-footer"><span>{campaigns[0].slots_left !== null ? `${campaigns[0].slots_left} slots left` : 'Open now'}</span><span>{campaigns[0].brand || ''}</span></div></div> : <div className="hero-card main-product"><div className="product-top"><span>NEXT DROP</span><span className="green-pill">SOON</span></div><div className="earbuds"><span /><span /></div><p>New drops arriving soon</p><small>Fresh brand campaigns are being set up.</small></div>}
         <div className="floating-stat stat-one"><span className="icon-box mint"><TrendingUp size={17} /></span><div><small>Partner earnings</small><strong>₹18,420</strong></div><span className="up-label">+24%</span></div>
         <div className="floating-stat stat-two"><span className="icon-box dark"><PackageCheck size={17} /></span><div><small>Products delivered</small><strong>1,284</strong></div></div>
         <div className="micro-label label-one">01 <span>DISCOVER</span></div><div className="micro-label label-two">02 <span>COLLABORATE</span></div>
       </div>
     </section>
-    <section className="marquee-band"><div className="marquee-track">{['BOLT EVO', 'ORIENT', 'LUMA SKIN', 'SONIC', 'NOVA HOME', 'BOLT EVO', 'ORIENT', 'LUMA SKIN', 'SONIC', 'NOVA HOME'].map((brand, index) => <span key={`${brand}-${index}`}><i /> {brand}</span>)}</div></section>
+    {campaigns.length > 0 && <section className="marquee-band"><div className="marquee-track">{[...campaigns, ...campaigns].map((c, index) => <span key={`${c.id}-${index}`}><i /> {(c.brand || c.name).toUpperCase()}</span>)}</div></section>}
     <section className="section-wrap intro-section"><div className="section-kicker">WHY BARTERKARTALE</div><div className="intro-grid"><h2>Where brands meet<br /><em>the next voice.</em></h2><div><p>We make product collaborations feel less like paperwork and more like progress. Browse curated campaigns, follow clear verification steps, and build a track record brands can trust.</p><button className="underlined-link" onClick={onStart}>See how it works <ArrowRight size={16} /></button></div></div><div className="feature-row"><Feature icon={<Target />} number="01" title="Curated campaigns" text="Thoughtful product drops matched to real communities." /><Feature icon={<FileCheck2 />} number="02" title="Clear verification" text="Simple steps, transparent timelines, no hidden surprises." /><Feature icon={<WalletCards />} number="03" title="Fair outcomes" text="Keep products or earn responsibly through approved campaigns." /></div></section>
     <section className="dark-preview"><div className="section-wrap preview-grid"><div><div className="eyebrow light"><span className="eyebrow-line" /> THE RET-EARN MODEL</div><h2>Beta testing<br />built on <em>trust.</em></h2><p>For approved partners, Ret-Earn makes milestone verification easier to understand: complete the agreed brief, upload authentic proof, and get reviewed on a clear timeline.</p><button className="outline-light" onClick={onConsole}>Enter Partner Console <ArrowRight size={16} /></button></div><div className="retearn-card"><div className="retearn-heading"><img src={retearnLogo} alt="Ret-Earn" /><span>PARTNER VIEW</span></div><div className="earn-amount"><small>AVAILABLE THIS WEEK</small><strong>₹12,840</strong><span><TrendingUp size={14} /> 18.6% from last week</span></div><div className="mini-chart"><i /><i /><i /><i /><i /><i /><i /></div><div className="retearn-footer"><span><span className="live-dot" /> 3 live tasks</span><span>Updated moments ago</span></div></div></div></section>
-    <section className="section-wrap campaign-preview"><div className="section-heading"><div><div className="section-kicker">OPEN NOW</div><h2>Find your next <em>collab.</em></h2></div><button className="underlined-link" onClick={onExplore}>View all campaigns <ArrowRight size={16} /></button></div><div className="campaign-grid">{campaigns.slice(0, 3).map((campaign) => <CampaignCard key={campaign.product} campaign={campaign} />)}</div></section>
+    <section className="section-wrap campaign-preview"><div className="section-heading"><div><div className="section-kicker">OPEN NOW</div><h2>Find your next <em>collab.</em></h2></div><button className="underlined-link" onClick={onExplore}>View all campaigns <ArrowRight size={16} /></button></div><div className="campaign-grid">{campaigns.length === 0 ? <EmptyDrops /> : campaigns.slice(0, 3).map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} />)}</div></section>
   </>;
 }
 
 function Feature({ icon, number, title, text }: { icon: React.ReactNode; number: string; title: string; text: string }) { return <div className="feature"><div className="feature-icon">{icon}</div><span className="feature-number">{number}</span><h3>{title}</h3><p>{text}</p></div>; }
 
-function CampaignCard({ campaign }: { campaign: typeof campaigns[number] }) { return <article className={`campaign-card ${campaign.color}`}><div className="campaign-image"><div className="image-orb" /><span className="campaign-tag">{campaign.type}</span><span className="brand-mark">{campaign.brand.slice(0, 1)}</span></div><div className="campaign-details"><div className="campaign-meta"><span>{campaign.category}</span><span>{campaign.value} value</span></div><h3>{campaign.product}</h3><div className="campaign-reward"><span>Partner outcome</span><strong>{campaign.reward}</strong></div><button className="card-link">View campaign <ArrowRight size={15} /></button></div></article>; }
+function EmptyDrops() { return <div className="empty-state drops-empty"><Sparkles size={30} /><strong>New drops arriving soon</strong><p>Live brand campaigns will appear here as soon as they open.</p></div>; }
 
-function Campaigns({ category, setCategory, onBook }: { category: CampaignCategory; setCategory: (category: CampaignCategory) => void; onBook: () => void }) { const filtered = category === 'All' ? campaigns : campaigns.filter((item) => item.category === category); return <section className="section-wrap page-section"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> ACTIVE CAMPAIGNS</div><h1>Choose a brief that<br /><em>fits your world.</em></h1></div><p>Every drop has a clear brief, a real product, and a transparent path from order to verification.</p></div><div className="filter-bar"><div>{(['All', 'Electronics', 'Home', 'Beauty'] as CampaignCategory[]).map((item) => <button className={category === item ? 'filter active' : 'filter'} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><span><span className="live-dot" /> {filtered.length} campaigns available</span></div><div className="campaign-grid full">{filtered.map((campaign) => <div key={campaign.product} onClick={onBook}><CampaignCard campaign={campaign} /></div>)}</div><div className="responsible-note"><ShieldCheck size={20} /><div><strong>Responsible collaboration, always.</strong><p>Campaigns are based on authentic experiences and approved briefs. No paid fake reviews, manipulated ratings, or off-platform pressure.</p></div></div></section>; }
+function Campaigns({ campaigns, category, setCategory, onBook }: { campaigns: LiveCampaign[]; category: CampaignCategory; setCategory: (category: CampaignCategory) => void; onBook: () => void }) { const categories = ['All', ...Array.from(new Set(campaigns.map((c) => c.category)))]; const filtered = category === 'All' ? campaigns : campaigns.filter((item) => item.category === category); return <section className="section-wrap page-section"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> ACTIVE CAMPAIGNS</div><h1>Choose a brief that<br /><em>fits your world.</em></h1></div><p>Every drop has a clear brief, a real product, and a transparent path from order to verification.</p></div><div className="filter-bar"><div>{categories.map((item) => <button className={category === item ? 'filter active' : 'filter'} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><span><span className="live-dot" /> {filtered.length} campaigns available</span></div><div className="campaign-grid full">{filtered.length === 0 ? <EmptyDrops /> : filtered.map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} />)}</div><div className="responsible-note"><ShieldCheck size={20} /><div><strong>Responsible collaboration, always.</strong><p>Campaigns are based on authentic experiences and approved briefs. No paid fake reviews, manipulated ratings, or off-platform pressure.</p></div></div></section>; }
 
 function About() { return <section className="section-wrap page-section about-page"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> OUR POINT OF VIEW</div><h1>Better commerce<br /><em>starts with clarity.</em></h1></div><p>BarterKartale sits between brands and communities, making product discovery more human and creator work more sustainable.</p></div><div className="about-hero"><div className="about-number">02 <span>/ 04</span></div><div><h2>Not just another<br />campaign marketplace.</h2><p>We care about the details that make partnerships last: honest product feedback, respectful timelines, and payouts that arrive when the work is genuinely complete.</p></div><div className="about-stamp"><Sparkles size={25} /><span>MADE FOR<br /><b>REAL PEOPLE</b></span></div></div><div className="values-grid"><div><span>01</span><h3>Human first</h3><p>We build around how people actually discover, test, and talk about products.</p></div><div><span>02</span><h3>Built for trust</h3><p>Clear briefs and transparent review checkpoints protect every side of the collaboration.</p></div><div><span>03</span><h3>Always evolving</h3><p>From campus communities to digital creators, we keep opening new doors to opportunity.</p></div></div></section>; }
 
