@@ -1,21 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { OrderSearch, matchesOrder } from '@/components/app/OrderSearch';
+import { BADGE_COLORS, type ExtraDetail, type LiveCampaign } from '@/components/app/CampaignCard';
 import {
   ArrowRight, BadgeCheck, Ban, CheckCircle2, Edit3, ExternalLink, IndianRupee,
   LayoutDashboard, LockKeyhole, LogOut, MapPin, Fingerprint, Plus, Save,
-  Search, ShieldCheck, ToggleLeft, ToggleRight, Users, X, Zap
+  Search, ShieldCheck, Trash2, ToggleLeft, ToggleRight, Users, X, Zap
 } from 'lucide-react';
 
-type Campaign = {
-  id: string;
-  name: string;
-  platform: string;
-  incentive_amount: number;
-  campaign_link: string;
-  is_active: boolean;
-  created_at: string;
-};
+type Campaign = LiveCampaign;
 
 type AdminUser = {
   id: string;
@@ -160,51 +153,64 @@ function CampaignManager({ campaigns, onRefresh }: { campaigns: Campaign[]; onRe
 }
 
 function CampaignForm({ editing, onClose, onSaved }: { editing: Campaign | null; onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState(editing?.name || '');
-  const [platform, setPlatform] = useState(editing?.platform || 'Amazon');
-  const [incentive, setIncentive] = useState(String(editing?.incentive_amount || ''));
-  const [link, setLink] = useState(editing?.campaign_link || '');
+  const [f, setF] = useState({
+    name: editing?.name || '', brand: editing?.brand || '', platform: editing?.platform || 'Amazon',
+    category: editing?.category || 'General', product_value: editing?.product_value || '',
+    reward_label: editing?.reward_label || '', incentive_amount: String(editing?.incentive_amount ?? '0'),
+    campaign_link: editing?.campaign_link || '', image_url: editing?.image_url || '',
+    badge_color: editing?.badge_color || 'mint', description: editing?.description || '',
+    slots_left: editing?.slots_left != null ? String(editing.slots_left) : '',
+  });
+  const [extras, setExtras] = useState<ExtraDetail[]>(Array.isArray(editing?.extra_details) ? editing!.extra_details! : []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((p) => ({ ...p, [k]: e.target.value }));
 
   const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    setSaving(true);
-    setError('');
-    const incentiveNum = parseInt(incentive, 10);
-    if (isNaN(incentiveNum) || incentiveNum < 0) {
-      setError('Enter a valid incentive amount in Rupees.');
-      setSaving(false);
-      return;
-    }
-    const { error: rpcError } = await supabase.rpc('save_campaign', {
-      p_name: name,
-      p_platform: platform,
-      p_incentive: incentiveNum,
-      p_link: link,
-      ...(editing?.id ? { p_campaign_id: editing.id } : {}),
-    });
-    if (rpcError) {
-      setError('Could not save the campaign. Please try again.');
-      setSaving(false);
-      return;
-    }
+    const amount = parseInt(f.incentive_amount || '0', 10);
+    if (isNaN(amount) || amount < 0) { setError('Enter a valid amount in Rupees.'); return; }
+    setSaving(true); setError('');
+    const { error: rpcError } = await supabase.rpc('save_campaign_full' as never, {
+      p_campaign_id: editing?.id ?? null,
+      p_data: { ...f, incentive_amount: amount, extra_details: extras.filter((x) => x.label.trim() || x.value.trim()) },
+    } as never);
     setSaving(false);
+    if (rpcError) { setError('Could not save the campaign. Please try again.'); return; }
     onSaved();
   };
 
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
-      <div className="form-modal" onMouseDown={(event) => event.stopPropagation()}>
+      <div className="form-modal wide-modal" onMouseDown={(event) => event.stopPropagation()}>
         <button className="modal-close" onClick={onClose}><X size={18} /></button>
         <div className="section-kicker">{editing ? 'EDIT CAMPAIGN' : 'NEW CAMPAIGN'}</div>
         <h2>{editing ? 'Edit campaign' : 'Create a new'} <em>campaign.</em></h2>
         <form onSubmit={submit}>
           <div className="form-grid">
-            <label className="wide">Campaign name<input required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Bolt Evo Air Pro Drop" /></label>
-            <label>Platform<select value={platform} onChange={(e) => setPlatform(e.target.value)}>{PLATFORMS.map((p) => <option key={p}>{p}</option>)}</select></label>
-            <label>Incentive (in ₹)<input required type="number" min={0} value={incentive} onChange={(e) => setIncentive(e.target.value)} placeholder="e.g. 2500" /></label>
-            <label className="wide">Campaign link<input required type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…" /></label>
+            <label className="wide">Product / campaign name<input required value={f.name} onChange={set('name')} /></label>
+            <label>Brand<input value={f.brand} onChange={set('brand')} /></label>
+            <label>Category<input value={f.category} onChange={set('category')} placeholder="Electronics, Beauty…" /></label>
+            <label>Platform<select value={f.platform} onChange={set('platform')}>{PLATFORMS.map((p) => <option key={p}>{p}</option>)}</select></label>
+            <label>Product value<input value={f.product_value} onChange={set('product_value')} placeholder="₹3,999" /></label>
+            <label>Partner outcome<input value={f.reward_label} onChange={set('reward_label')} placeholder="Keep the product" /></label>
+            <label>Amount (₹, optional)<input type="number" min={0} value={f.incentive_amount} onChange={set('incentive_amount')} /></label>
+            <label>Slots left<input type="number" min={0} value={f.slots_left} onChange={set('slots_left')} /></label>
+            <label>Card colour<select value={f.badge_color} onChange={set('badge_color')}>{BADGE_COLORS.map((c) => <option key={c}>{c}</option>)}</select></label>
+            <label className="wide">Product photo link<input type="url" value={f.image_url} onChange={set('image_url')} placeholder="https://…" /></label>
+            <label className="wide">Apply link (Google Form or brand page)<input required type="url" value={f.campaign_link} onChange={set('campaign_link')} placeholder="https://…" /></label>
+            <label className="wide">Description<textarea rows={3} value={f.description} onChange={set('description')} /></label>
+          </div>
+          <div className="extra-details">
+            <div className="section-kicker">EXTRA DETAILS</div>
+            {extras.map((x, i) => (
+              <div className="extra-row" key={i}>
+                <input placeholder="Label (e.g. Warranty)" value={x.label} onChange={(e) => setExtras((p) => p.map((y, k) => k === i ? { ...y, label: e.target.value } : y))} />
+                <input placeholder="Value (e.g. 1 year)" value={x.value} onChange={(e) => setExtras((p) => p.map((y, k) => k === i ? { ...y, value: e.target.value } : y))} />
+                <button type="button" className="link-chip ban" onClick={() => setExtras((p) => p.filter((_, k) => k !== i))}><Trash2 size={12} /></button>
+              </div>
+            ))}
+            <button type="button" className="link-chip" onClick={() => setExtras((p) => [...p, { label: '', value: '' }])}><Plus size={12} /> Add detail</button>
           </div>
           {error && <p className="form-error">{error}</p>}
           <button className="primary-button full-button" disabled={saving}>{saving ? 'Saving…' : <><Save size={16} /> {editing ? 'Update campaign' : 'Create campaign'}</>} <ArrowRight size={16} /></button>
