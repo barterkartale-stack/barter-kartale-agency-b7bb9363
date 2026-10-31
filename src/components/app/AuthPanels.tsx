@@ -94,10 +94,23 @@ export function SignUpPanel({ onSuccess, onError }: { onSuccess: () => void; onE
   const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setLoading(true);
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/dashboard` } });
+    const { data, error: signUpError } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin, data: { display_name: name, mobile_number: mobile } } });
     if (signUpError || !data.user) {
       setLoading(false);
-      onError('Could not create your account. This email may already be registered.');
+      const msg = signUpError?.message?.toLowerCase() || '';
+      onError(msg.includes('registered') ? 'This email is already registered. Please Sign In.' : msg.includes('password') ? 'Password too weak. Use 8+ characters with letters and numbers.' : 'Could not create your account. Please try again.');
+      return;
+    }
+    if (data.user.identities && data.user.identities.length === 0) {
+      setLoading(false);
+      onError('This email is already registered. Please Sign In.');
+      return;
+    }
+    if (!data.session) {
+      window.sessionStorage.setItem('bk_after_login', '/dashboard');
+      setLoading(false);
+      onError('Account created! Check your email inbox and click the confirmation link to sign in.');
+      onSuccess();
       return;
     }
     const [signUpIp, deviceFingerprint] = await Promise.all([captureSignUpIp(), Promise.resolve(generateDeviceFingerprint())]);

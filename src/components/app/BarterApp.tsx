@@ -71,7 +71,12 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
   }, [session]);
 
   const loadProfile = async (activeSession: Session): Promise<void> => {
-    const { data } = await supabase.from('profiles').select('display_name, role, onboarding_complete').eq('id', activeSession.user.id).maybeSingle();
+    let { data } = await supabase.from('profiles').select('display_name, role, onboarding_complete').eq('id', activeSession.user.id).maybeSingle();
+    const meta = activeSession.user.user_metadata as { display_name?: string; mobile_number?: string } | undefined;
+    if ((!data || !data.onboarding_complete) && meta?.mobile_number) {
+      const { data: created } = await supabase.rpc('complete_partner_onboarding', { p_display_name: meta.display_name || '', p_mobile_number: meta.mobile_number });
+      if (created) data = { display_name: created.display_name, role: created.role, onboarding_complete: created.onboarding_complete };
+    }
     setProfile(data as { display_name: string | null; role: PartnerRole; onboarding_complete: boolean } | null);
     if (!data || !data.onboarding_complete) {
       setOnboarding(true);
