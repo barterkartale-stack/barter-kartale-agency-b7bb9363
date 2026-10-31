@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as PartnerConsoleRouteImport } from './routes/partner-console'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SuperAdminRouteImport } from './routes/super-admin'
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PartnerConsoleRoute = PartnerConsoleRouteImport.update({
@@ -44,6 +50,7 @@ const SuperAdminRoute = SuperAdminRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
   '/partner-console': typeof PartnerConsoleRoute
   '/reset-password': typeof ResetPasswordRoute
   '/super-admin': typeof SuperAdminRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
   '/partner-console': typeof PartnerConsoleRoute
   '/reset-password': typeof ResetPasswordRoute
   '/super-admin': typeof SuperAdminRoute
@@ -59,6 +67,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
   '/partner-console': typeof PartnerConsoleRoute
   '/reset-password': typeof ResetPasswordRoute
   '/super-admin': typeof SuperAdminRoute
@@ -66,14 +75,25 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/dashboard' | '/partner-console' | '/reset-password' | '/super-admin'
+    | '/'
+    | '/dashboard'
+    | '/demo'
+    | '/partner-console'
+    | '/reset-password'
+    | '/super-admin'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/dashboard' | '/partner-console' | '/reset-password' | '/super-admin'
+    | '/'
+    | '/dashboard'
+    | '/demo'
+    | '/partner-console'
+    | '/reset-password'
+    | '/super-admin'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/demo'
     | '/partner-console'
     | '/reset-password'
     | '/super-admin'
@@ -82,6 +102,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
+  DemoRoute: typeof DemoRoute
   PartnerConsoleRoute: typeof PartnerConsoleRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SuperAdminRoute: typeof SuperAdminRoute
@@ -101,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/partner-console': {
@@ -130,6 +158,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
+  DemoRoute: DemoRoute,
   PartnerConsoleRoute: PartnerConsoleRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SuperAdminRoute: SuperAdminRoute,

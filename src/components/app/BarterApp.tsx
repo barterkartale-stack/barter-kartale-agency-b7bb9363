@@ -5,6 +5,7 @@ import { GoogleAccessPanel, OnboardingPanel, StealthLoginPanel, EmailAccessPanel
 import { OrderSearch, matchesOrder } from '@/components/app/OrderSearch';
 import { SuperAdmin } from '@/components/app/SuperAdmin';
 import { HelpCenter } from '@/components/app/HelpCenter';
+import { MarketplaceDemo } from '@/components/app/MarketplaceDemo';
 import { CampaignCard, type LiveCampaign } from '@/components/app/CampaignCard';
 import {
   ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronDown, CircleHelp,
@@ -13,7 +14,7 @@ import {
   Search, Upload, Users, WalletCards, X, Zap
 } from 'lucide-react';
 
-export type View = 'home' | 'campaigns' | 'about' | 'careers' | 'dashboard' | 'console' | 'superadmin';
+export type View = 'home' | 'campaigns' | 'about' | 'careers' | 'demo' | 'dashboard' | 'console' | 'superadmin';
 type CampaignCategory = string;
 type Order = { name: string; address: string; platform: string; deal: string; orderId: string; status: string };
 
@@ -90,7 +91,7 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
   }, [toast]);
 
   const goTo = (next: View) => {
-    const route = next === 'dashboard' ? '/dashboard' : next === 'console' ? '/partner-console' : next === 'superadmin' ? '/super-admin' : '/';
+    const route = next === 'dashboard' ? '/dashboard' : next === 'console' ? '/partner-console' : next === 'superadmin' ? '/super-admin' : next === 'demo' ? '/demo' : '/';
     window.history.pushState({}, '', route);
     setView(next);
     setMenuOpen(false);
@@ -177,9 +178,9 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
           <span><b>Barter</b>Kartale</span>
         </button>
         <nav className={menuOpen ? 'main-nav open' : 'main-nav'}>
-          {(['home', 'campaigns', 'about', 'careers'] as View[]).map((item) => (
+          {(['home', 'campaigns', 'about', 'careers', 'demo'] as View[]).map((item) => (
             <button key={item} className={view === item ? 'nav-link active' : 'nav-link'} onClick={() => goTo(item)}>
-              {item === 'home' ? 'Home' : item === 'campaigns' ? 'Active Campaigns' : item === 'about' ? 'About Us' : 'Careers'}
+              {item === 'home' ? 'Home' : item === 'campaigns' ? 'Active Campaigns' : item === 'about' ? 'About Us' : item === 'careers' ? 'Careers' : 'Try Demo'}
             </button>
           ))}
         </nav>
@@ -203,6 +204,7 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
         {view === 'campaigns' && <Campaigns campaigns={liveCampaigns} category={category} setCategory={setCategory} onBook={() => goTo('home')} />}
         {view === 'about' && <About />}
         {view === 'careers' && <Careers onSubmit={() => setToast('Application saved. Our team will review your profile shortly.')} />}
+        {view === 'demo' && <MarketplaceDemo />}
         {view === 'dashboard' && onDashboard && <PublicDashboard orders={orders} onOrder={submitOrder} onRefund={submitRefund} onSignOut={handleSignOut} displayName={profile!.display_name || session!.user.email || 'Partner'} />}
         {view === 'console' && profile && <PartnerConsole orders={orders} onOrder={submitOrder} onRefund={submitRefund} onSignOut={handleSignOut} role={profile.role} />}
         {view === 'superadmin' && profile && profile.role === 'Super_Admin' && <SuperAdmin onSignOut={handleSignOut} displayName={profile.display_name || session!.user.email || 'Admin'} />}
