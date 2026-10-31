@@ -52,36 +52,63 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          badge_color: string
+          brand: string | null
           campaign_link: string
+          category: string
           created_at: string
           created_by: string | null
+          description: string | null
+          extra_details: Json
           id: string
+          image_url: string | null
           incentive_amount: number
           is_active: boolean
           name: string
           platform: string
+          product_value: string | null
+          reward_label: string | null
+          slots_left: number | null
           updated_at: string
         }
         Insert: {
+          badge_color?: string
+          brand?: string | null
           campaign_link: string
+          category?: string
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          extra_details?: Json
           id?: string
+          image_url?: string | null
           incentive_amount: number
           is_active?: boolean
           name: string
           platform: string
+          product_value?: string | null
+          reward_label?: string | null
+          slots_left?: number | null
           updated_at?: string
         }
         Update: {
+          badge_color?: string
+          brand?: string | null
           campaign_link?: string
+          category?: string
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          extra_details?: Json
           id?: string
+          image_url?: string | null
           incentive_amount?: number
           is_active?: boolean
           name?: string
           platform?: string
+          product_value?: string | null
+          reward_label?: string | null
+          slots_left?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -96,6 +123,7 @@ export type Database = {
           id: string
           mobile_number: string | null
           onboarding_complete: boolean
+          review_eta: string | null
           role: string
           sign_up_ip: unknown
           updated_at: string
@@ -109,6 +137,7 @@ export type Database = {
           id: string
           mobile_number?: string | null
           onboarding_complete?: boolean
+          review_eta?: string | null
           role?: string
           sign_up_ip?: unknown
           updated_at?: string
@@ -122,6 +151,7 @@ export type Database = {
           id?: string
           mobile_number?: string | null
           onboarding_complete?: boolean
+          review_eta?: string | null
           role?: string
           sign_up_ip?: unknown
           updated_at?: string
@@ -234,6 +264,7 @@ export type Database = {
           id: string
           mobile_number: string | null
           onboarding_complete: boolean
+          review_eta: string | null
           role: string
           sign_up_ip: unknown
           updated_at: string
@@ -257,6 +288,7 @@ export type Database = {
           id: string
           mobile_number: string | null
           onboarding_complete: boolean
+          review_eta: string | null
           role: string
           sign_up_ip: unknown
           updated_at: string
@@ -277,14 +309,52 @@ export type Database = {
           p_platform: string
         }
         Returns: {
+          badge_color: string
+          brand: string | null
           campaign_link: string
+          category: string
           created_at: string
           created_by: string | null
+          description: string | null
+          extra_details: Json
           id: string
+          image_url: string | null
           incentive_amount: number
           is_active: boolean
           name: string
           platform: string
+          product_value: string | null
+          reward_label: string | null
+          slots_left: number | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "campaigns"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_campaign_full: {
+        Args: { p_campaign_id: string; p_data: Json }
+        Returns: {
+          badge_color: string
+          brand: string | null
+          campaign_link: string
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          extra_details: Json
+          id: string
+          image_url: string | null
+          incentive_amount: number
+          is_active: boolean
+          name: string
+          platform: string
+          product_value: string | null
+          reward_label: string | null
+          slots_left: number | null
           updated_at: string
         }
         SetofOptions: {
