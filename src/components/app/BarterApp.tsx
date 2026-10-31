@@ -50,13 +50,13 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
     };
     void loadSession();
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      (async () => {
+      setTimeout(() => { void (async () => {
         if (!mounted) return;
         setSession(nextSession);
         if (nextSession) await loadProfile(nextSession);
         else { setProfile(null); setOnboarding(false); }
         setAuthLoading(false);
-      })();
+      })(); }, 0);
     });
     return () => { mounted = false; listener.subscription.unsubscribe(); };
   }, []);
