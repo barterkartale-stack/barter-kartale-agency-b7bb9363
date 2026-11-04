@@ -16,7 +16,7 @@ import { captureIp } from "@/lib/capture-ip.functions";
 
 export type PartnerRole = "Reviewer" | "Assistant_Coordinator" | "Ground_Manager" | "Super_Admin";
 
-async function captureSignUpIp(): Promise<string | null> {
+export async function captureSignUpIp(): Promise<string | null> {
   try {
     const { ip } = await captureIp();
     return ip;
@@ -25,7 +25,7 @@ async function captureSignUpIp(): Promise<string | null> {
   }
 }
 
-function generateDeviceFingerprint(): string {
+export function generateDeviceFingerprint(): string {
   try {
     const nav = navigator;
     const screen = window.screen;
