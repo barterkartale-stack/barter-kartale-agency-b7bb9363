@@ -50,6 +50,13 @@ export function GoogleAccessPanel({ onError }: { onError: (message: string) => v
   const continueWithGoogle = async (): Promise<void> => {
     setLoading(true);
     window.sessionStorage.setItem('bk_after_login', '/dashboard');
+    // Managed Google sign-in only runs on Lovable-hosted domains; elsewhere (e.g. Vercel) send users to the main site.
+    const host = window.location.hostname;
+    const onLovableHost = /(^|\.)lovable\.app$|(^|\.)lovableproject\.com$|^localhost$|^127\.0\.0\.1$/.test(host);
+    if (!onLovableHost) {
+      window.location.href = 'https://barterhere.lovable.app/?login=google';
+      return;
+    }
     const result = await lovable.auth.signInWithOAuth('google', { redirect_uri: window.location.origin });
     if (result.error) {
       setLoading(false);
