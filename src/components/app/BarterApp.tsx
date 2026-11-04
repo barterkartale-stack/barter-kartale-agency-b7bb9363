@@ -1,12 +1,13 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { GoogleAccessPanel, OnboardingPanel, StealthLoginPanel, EmailAccessPanel, SignUpPanel, ForgotPasswordPanel, type PartnerRole } from '@/components/app/AuthPanels';
+import { ForgotPasswordPanel, type PartnerRole } from '@/components/app/AuthPanels';
 import { OrderSearch, matchesOrder } from '@/components/app/OrderSearch';
 import { SuperAdmin } from '@/components/app/SuperAdmin';
 import { HelpCenter } from '@/components/app/HelpCenter';
 import { MarketplaceDemo } from '@/components/app/MarketplaceDemo';
 import { CampaignCard, type LiveCampaign } from '@/components/app/CampaignCard';
+import { AuthGateway, AccountSetupModal, ReferralCard, PartnerPendingScreen, completeAccountSetup, enforceKeepSignedIn, readPending, clearPending, rememberAccount, type AuthMode } from '@/components/app/AccountAuth';
 import {
   ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronDown, CircleHelp,
   Clock3, FileCheck2, IndianRupee, Layers3, LayoutDashboard, LockKeyhole, LogOut,
@@ -16,6 +17,7 @@ import {
 
 export type View = 'home' | 'campaigns' | 'about' | 'careers' | 'demo' | 'dashboard' | 'console' | 'superadmin';
 type CampaignCategory = string;
+type Profile = { display_name: string | null; role: PartnerRole; onboarding_complete: boolean; referral_code: string | null; access_status: string; account_type: string; review_eta: string | null };
 type Order = { name: string; address: string; platform: string; deal: string; orderId: string; status: string };
 
 const logo = '/assets/images/1003464620.png';
@@ -28,7 +30,7 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [googleOpen, setGoogleOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<{ display_name: string | null; role: PartnerRole; onboarding_complete: boolean } | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [onboarding, setOnboarding] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -42,6 +44,7 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
   useEffect(() => {
     let mounted = true;
     const loadSession = async (): Promise<void> => {
+      await enforceKeepSignedIn();
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
       setSession(data.session);
@@ -71,22 +74,31 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
   }, [session]);
 
   const loadProfile = async (activeSession: Session): Promise<void> => {
-    let { data } = await supabase.from('profiles').select('display_name, role, onboarding_complete').eq('id', activeSession.user.id).maybeSingle();
-    const meta = activeSession.user.user_metadata as { display_name?: string; mobile_number?: string } | undefined;
+    const cols = 'display_name, role, onboarding_complete, referral_code, access_status, account_type, review_eta';
+    let { data } = await supabase.from('profiles').select(cols).eq('id', activeSession.user.id).maybeSingle();
+    const meta = activeSession.user.user_metadata as { display_name?: string; mobile_number?: string; signup_mode?: AuthMode; referral_code?: string; invite_code?: string } | undefined;
     if ((!data || !data.onboarding_complete) && meta?.mobile_number) {
-      const { data: created } = await supabase.rpc('complete_partner_onboarding', { p_display_name: meta.display_name || '', p_mobile_number: meta.mobile_number });
-      if (created) data = { display_name: created.display_name, role: created.role, onboarding_complete: created.onboarding_complete };
+      const pending = readPending();
+      const mode: AuthMode = pending?.mode || meta.signup_mode || 'creator';
+      const { error } = await completeAccountSetup({ name: meta.display_name || '', mobile: meta.mobile_number, mode, referral: pending?.referral || meta.referral_code, invite: pending?.invite || meta.invite_code });
+      if (!error) {
+        clearPending();
+        ({ data } = await supabase.from('profiles').select(cols).eq('id', activeSession.user.id).maybeSingle());
+      }
     }
-    setProfile(data as { display_name: string | null; role: PartnerRole; onboarding_complete: boolean } | null);
+    setProfile(data as Profile | null);
     if (!data || !data.onboarding_complete) {
       setOnboarding(true);
-    } else {
-      setOnboarding(false);
-      const after = window.sessionStorage.getItem('bk_after_login');
-      if (after === '/dashboard') { window.sessionStorage.removeItem('bk_after_login'); window.history.replaceState({}, '', '/dashboard'); setView('dashboard'); }
-      if (window.location.pathname === '/dashboard') setView('dashboard');
-      if (window.location.pathname === '/super-admin') setView('superadmin');
+      return;
     }
+    setOnboarding(false);
+    rememberAccount({ email: activeSession.user.email || '', name: data.display_name || '' });
+    const after = window.sessionStorage.getItem('bk_after_login');
+    window.sessionStorage.removeItem('bk_after_login');
+    const path = after || window.location.pathname;
+    if (path === '/partner-console') { window.history.replaceState({}, '', '/partner-console'); setView('console'); setConsoleOpen(false); }
+    else if (path === '/super-admin') setView('superadmin');
+    else if (path === '/dashboard' || path === '/auth/callback') { window.history.replaceState({}, '', '/dashboard'); setView('dashboard'); }
   };
 
   useEffect(() => {
@@ -103,24 +115,22 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const isStaff = !!profile && ['Assistant_Coordinator', 'Ground_Manager', 'Super_Admin'].includes(profile.role);
+  const isConsoleMember = !!profile && (isStaff || profile.account_type === 'partner');
+
   const openGoogle = () => {
     setGoogleOpen(true);
     setMenuOpen(false);
   };
 
   const openConsole = () => {
+    if (isConsoleMember) { goTo('console'); return; }
     setConsoleOpen(true);
     setMenuOpen(false);
   };
 
-  const onStealthLogin = (role: PartnerRole, displayName: string | null): void => {
-    setProfile({ display_name: displayName, role, onboarding_complete: true });
-    setConsoleOpen(false);
-    setView('console');
-    setToast('Secure operations console unlocked.');
-  };
-
   const handleSignOut = async (): Promise<void> => {
+    if (session?.user.email) rememberAccount({ email: session.user.email, name: profile?.display_name || '' });
     await supabase.auth.signOut();
     setProfile(null);
     setOnboarding(false);
@@ -211,7 +221,9 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
         {view === 'careers' && <Careers onSubmit={() => setToast('Application saved. Our team will review your profile shortly.')} />}
         {view === 'demo' && <MarketplaceDemo />}
         {view === 'dashboard' && onDashboard && <PublicDashboard orders={orders} onOrder={submitOrder} onRefund={submitRefund} onSignOut={handleSignOut} displayName={profile!.display_name || session!.user.email || 'Partner'} />}
-        {view === 'console' && profile && <PartnerConsole orders={orders} onOrder={submitOrder} onRefund={submitRefund} onSignOut={handleSignOut} role={profile.role} />}
+        {view === 'dashboard' && onDashboard && <section className="section-wrap"><ReferralCard code={profile!.referral_code} /></section>}
+        {view === 'console' && profile && !isStaff && profile.access_status === 'pending' && <PartnerPendingScreen reviewEta={profile.review_eta} onSignOut={handleSignOut} />}
+        {view === 'console' && profile && isConsoleMember && profile.access_status === 'active' && <PartnerConsole orders={orders} onOrder={submitOrder} onRefund={submitRefund} onSignOut={handleSignOut} role={profile.role} />}
         {view === 'superadmin' && profile && profile.role === 'Super_Admin' && <SuperAdmin onSignOut={handleSignOut} displayName={profile.display_name || session!.user.email || 'Admin'} />}
       </main>
 
@@ -221,9 +233,9 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
         <div className="footer-note"><ShieldCheck size={15} /> Built around transparent creator commerce</div>
       </footer>
 
-      {googleOpen && <AuthModal onClose={() => setGoogleOpen(false)} onError={(message) => setToast(message)} />}
-      {consoleOpen && <StealthModal onClose={() => setConsoleOpen(false)} onSuccess={onStealthLogin} onError={(message) => setToast(message)} />}
-      {onboarding && session && <OnboardingModal session={session} onComplete={completeOnboarding} onError={(message) => setToast(message)} />}
+      {googleOpen && <AuthModal mode="creator" onClose={() => setGoogleOpen(false)} onError={(message) => setToast(message)} />}
+      {consoleOpen && <AuthModal mode="partner" onClose={() => setConsoleOpen(false)} onError={(message) => setToast(message)} />}
+      {onboarding && session && <AccountSetupModal session={session} onComplete={completeOnboarding} onError={(message) => setToast(message)} />}
       {toast && <div className="toast"><BadgeCheck size={18} /><span>{toast}</span><button onClick={() => setToast('')}><X size={15} /></button></div>}
       <HelpCenter />
     </div>
@@ -267,20 +279,14 @@ function Careers({ onSubmit }: { onSubmit: () => void }) { const [submitted, set
 
 function Role({ icon, title, text, tag }: { icon: React.ReactNode; title: string; text: string; tag: string }) { return <div className="role-row"><div className="role-icon">{icon}</div><div><span>{tag}</span><h3>{title}</h3><p>{text}</p></div><ArrowRight size={19} /></div>; }
 
-function AuthModal({ onClose, onError }: { onClose: () => void; onError: (message: string) => void }) {
-  const [mode, setMode] = useState<'gateway' | 'forgot'>('gateway');
-  const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signin');
-
-  if (mode === 'forgot') {
-    return <div className="modal-backdrop" onMouseDown={onClose}><div className="login-modal" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose}><X size={18} /></button><ForgotPasswordPanel onClose={() => setMode('gateway')} onError={onError} /></div></div>;
+function AuthModal({ mode, onClose, onError }: { mode: AuthMode; onClose: () => void; onError: (message: string) => void }) {
+  const [forgot, setForgot] = useState(false);
+  if (forgot) {
+    return <div className="modal-backdrop" onMouseDown={onClose}><div className="login-modal" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose}><X size={18} /></button><ForgotPasswordPanel onClose={() => setForgot(false)} onError={onError} /></div></div>;
   }
-
-  return <div className="modal-backdrop" onMouseDown={onClose}><div className="login-modal access-gateway" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose}><X size={18} /></button><div className="section-kicker">ACCESS GATEWAY</div><h2>Welcome to<br /><em>BarterKartale.</em></h2><p>Sign in to your dashboard or create a new partner account.</p><GoogleAccessPanel onError={onError} /><div className="auth-separator"><span>— Or use your credentials —</span></div><div className="auth-tabs"><button className={authTab === 'signin' ? 'auth-tab active' : 'auth-tab'} onClick={() => setAuthTab('signin')}>Sign In</button><button className={authTab === 'signup' ? 'auth-tab active' : 'auth-tab'} onClick={() => setAuthTab('signup')}>Sign Up</button></div>{authTab === 'signin' ? <EmailAccessPanel onSuccess={onClose} onError={onError} onForgotPassword={() => setMode('forgot')} /> : <SignUpPanel onSuccess={onClose} onError={onError} />}</div></div>;
+  return <AuthGateway mode={mode} onClose={onClose} onError={onError} onForgot={() => setForgot(true)} />;
 }
 
-function StealthModal({ onClose, onSuccess, onError }: { onClose: () => void; onSuccess: (role: PartnerRole, displayName: string | null) => void; onError: (message: string) => void }) { return <div className="modal-backdrop" onMouseDown={onClose}><div className="login-modal" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose}><X size={18} /></button><StealthLoginPanel onSuccess={onSuccess} onError={onError} /></div></div>; }
-
-function OnboardingModal({ session, onComplete, onError }: { session: Session; onComplete: () => void; onError: (message: string) => void }) { return <div className="modal-backdrop onboarding-backdrop"><OnboardingPanel email={session.user.email || 'your Google account'} onComplete={onComplete} onError={onError} /></div>; }
 
 function PublicDashboard({ orders, onOrder, onRefund, onSignOut, displayName }: { orders: Order[]; onOrder: (order: Order) => Promise<void>; onRefund: (refund: RefundData) => Promise<void>; onSignOut: () => void; displayName: string }) { const [showOrder, setShowOrder] = useState(false); const [refundOrderId, setRefundOrderId] = useState<string | null>(null); const [query, setQuery] = useState(''); const visibleOrders = orders.filter((order) => matchesOrder(order, query)); return <section className="section-wrap console-page"><div className="console-top"><div><div className="eyebrow"><span className="eyebrow-line" /> PUBLIC INFLUENCER DASHBOARD</div><h1>Welcome, <em>{displayName.split(' ')[0]}.</em></h1><p>Your sponsorship campaigns and partner network, in one focused view.</p></div><div className="console-user"><span className="user-avatar">{displayName.slice(0, 2).toUpperCase()}</span><div><strong>{displayName}</strong><small>Google-verified partner <BadgeCheck size={13} /></small></div></div></div><div className="console-tabs"><button className="active"><Layers3 size={16} /> BarterKartale Log</button><button><Users size={16} /> My Affiliate Net</button></div><div className="dashboard-search"><OrderSearch orders={orders} onSearch={setQuery} /></div><div className="public-dashboard-grid"><BarterLog orders={visibleOrders} hasOrders={orders.length > 0} onOrder={() => setShowOrder(true)} onRefund={(orderId) => setRefundOrderId(orderId)} /><Network /></div><div className="whatsapp-cta"><a className="whatsapp-link" href="https://chat.whatsapp.com/HEaCIH60fQ9GrgbxWYWizh" target="_blank" rel="noopener noreferrer">Join WhatsApp Group <ArrowRight size={16} /></a></div><div className="dashboard-actions"><button className="sign-out-button" onClick={onSignOut}><LogOut size={15} /> Sign out of dashboard</button></div>{showOrder && <OrderModal onClose={() => setShowOrder(false)} onSubmit={async (order) => { await onOrder(order); setShowOrder(false); }} />}{refundOrderId !== null && <RefundModal orders={orders} initialOrderId={refundOrderId} onClose={() => setRefundOrderId(null)} onSubmit={async (refund) => { await onRefund(refund); setRefundOrderId(null); }} />}</section>; }
 

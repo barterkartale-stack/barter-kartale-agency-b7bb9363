@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { ArrowRight, BadgeCheck, Clock3, Copy, KeyRound, LockKeyhole, Share2, ShieldCheck, UserRound, X } from "lucide-react";
+import { ArrowRight, BadgeCheck, Clock3, Copy, KeyRound, LockKeyhole, Share2, ShieldCheck, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { captureSignUpIp, generateDeviceFingerprint } from "@/components/app/AuthPanels";
@@ -378,6 +378,3 @@ export function PartnerPendingScreen({ reviewEta, onSignOut }: { reviewEta: stri
   );
 }
 
-export function SavedAccountIcon() {
-  return <UserRound size={14} />;
-}
