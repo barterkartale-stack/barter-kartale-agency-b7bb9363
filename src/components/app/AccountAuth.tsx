@@ -45,7 +45,7 @@ export async function enforceKeepSignedIn(): Promise<void> {
 
 /* ---------- Pending signup info (survives Google redirect / email confirm) ---------- */
 const PENDING_KEY = "bk_pending_signup";
-type PendingSignup = { mode: AuthMode; referral?: string; invite?: string };
+type PendingSignup = { mode: AuthMode; referral?: string | undefined; invite?: string | undefined };
 function savePending(p: PendingSignup): void {
   window.localStorage.setItem(PENDING_KEY, JSON.stringify(p));
 }
@@ -71,19 +71,20 @@ export async function completeAccountSetup(input: {
   name: string;
   mobile: string;
   mode: AuthMode;
-  referral?: string;
-  invite?: string;
+  referral?: string | undefined;
+  invite?: string | undefined;
 }) {
   const [ip, fp] = await Promise.all([captureSignUpIp(), Promise.resolve(generateDeviceFingerprint())]);
-  return supabase.rpc("complete_account_setup", {
+  const args: { p_display_name: string; p_mobile_number: string; p_device_fingerprint: string; p_partner: boolean; p_sign_up_ip?: string; p_referral_code?: string; p_invite_code?: string } = {
     p_display_name: input.name,
     p_mobile_number: input.mobile,
-    p_sign_up_ip: ip ?? undefined,
     p_device_fingerprint: fp,
-    p_referral_code: input.referral || undefined,
-    p_invite_code: input.invite || undefined,
     p_partner: input.mode === "partner",
-  });
+  };
+  if (ip) args.p_sign_up_ip = ip;
+  if (input.referral) args.p_referral_code = input.referral;
+  if (input.invite) args.p_invite_code = input.invite;
+  return supabase.rpc("complete_account_setup", args);
 }
 
 function friendlyRpcError(message: string | undefined): string {
