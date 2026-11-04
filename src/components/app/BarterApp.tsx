@@ -224,6 +224,8 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
         {view === 'dashboard' && onDashboard && <section className="section-wrap"><ReferralCard code={profile!.referral_code} /></section>}
         {view === 'console' && profile && !isStaff && profile.access_status === 'pending' && <PartnerPendingScreen reviewEta={profile.review_eta} onSignOut={handleSignOut} />}
         {view === 'console' && profile && isConsoleMember && profile.access_status === 'active' && <PartnerConsole orders={orders} onOrder={submitOrder} onRefund={submitRefund} onSignOut={handleSignOut} role={profile.role} />}
+        {view === 'console' && !isConsoleMember && <section className="section-wrap console-page"><div className="pending-card"><LockKeyhole size={28} /><div className="section-kicker">PRIVATE PARTNER CONSOLE</div><h1>Partner <em>access.</em></h1><p>Sign in or join with your agency invitation code.</p><button className="primary-button" onClick={() => setConsoleOpen(true)}>Open Partner Console <ArrowRight size={16} /></button></div></section>}
+        {view === 'superadmin' && !(profile && profile.role === 'Super_Admin') && <section className="section-wrap console-page"><div className="pending-card"><ShieldCheck size={28} /><div className="section-kicker">SUPER-ADMIN</div><h1>Restricted <em>access.</em></h1><p>Sign in with an authorised admin account to open the admin panel.</p>{!session && <button className="primary-button" onClick={openGoogle}>Sign In <ArrowRight size={16} /></button>}</div></section>}
         {view === 'superadmin' && profile && profile.role === 'Super_Admin' && <SuperAdmin onSignOut={handleSignOut} displayName={profile.display_name || session!.user.email || 'Admin'} />}
       </main>
 
