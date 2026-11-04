@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      agency_invite_codes: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
       campaign_enrollments: {
         Row: {
           campaign_type: string
@@ -116,13 +134,17 @@ export type Database = {
       profiles: {
         Row: {
           access_status: string
+          account_type: string
           created_at: string
           device_fingerprint: string | null
           display_name: string | null
           email: string
           id: string
+          invitation_code_used: string | null
           mobile_number: string | null
           onboarding_complete: boolean
+          referral_code: string | null
+          referred_by: string | null
           review_eta: string | null
           role: string
           sign_up_ip: unknown
@@ -130,13 +152,17 @@ export type Database = {
         }
         Insert: {
           access_status?: string
+          account_type?: string
           created_at?: string
           device_fingerprint?: string | null
           display_name?: string | null
           email: string
           id: string
+          invitation_code_used?: string | null
           mobile_number?: string | null
           onboarding_complete?: boolean
+          referral_code?: string | null
+          referred_by?: string | null
           review_eta?: string | null
           role?: string
           sign_up_ip?: unknown
@@ -144,13 +170,17 @@ export type Database = {
         }
         Update: {
           access_status?: string
+          account_type?: string
           created_at?: string
           device_fingerprint?: string | null
           display_name?: string | null
           email?: string
           id?: string
+          invitation_code_used?: string | null
           mobile_number?: string | null
           onboarding_complete?: boolean
+          referral_code?: string | null
+          referred_by?: string | null
           review_eta?: string | null
           role?: string
           sign_up_ip?: unknown
@@ -248,22 +278,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      complete_partner_onboarding: {
+      complete_account_setup: {
         Args: {
           p_device_fingerprint?: string
           p_display_name: string
+          p_invite_code?: string
           p_mobile_number: string
+          p_partner?: boolean
+          p_referral_code?: string
           p_sign_up_ip?: unknown
         }
         Returns: {
           access_status: string
+          account_type: string
           created_at: string
           device_fingerprint: string | null
           display_name: string | null
           email: string
           id: string
+          invitation_code_used: string | null
           mobile_number: string | null
           onboarding_complete: boolean
+          referral_code: string | null
+          referred_by: string | null
           review_eta: string | null
           role: string
           sign_up_ip: unknown
@@ -276,18 +313,55 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      is_super_admin: { Args: { _uid: string }; Returns: boolean }
-      list_admin_profiles: {
-        Args: never
+      complete_partner_onboarding: {
+        Args: {
+          p_device_fingerprint?: string
+          p_display_name: string
+          p_mobile_number: string
+          p_sign_up_ip?: unknown
+        }
         Returns: {
           access_status: string
+          account_type: string
           created_at: string
           device_fingerprint: string | null
           display_name: string | null
           email: string
           id: string
+          invitation_code_used: string | null
           mobile_number: string | null
           onboarding_complete: boolean
+          referral_code: string | null
+          referred_by: string | null
+          review_eta: string | null
+          role: string
+          sign_up_ip: unknown
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      generate_referral_code: { Args: never; Returns: string }
+      is_super_admin: { Args: { _uid: string }; Returns: boolean }
+      list_admin_profiles: {
+        Args: never
+        Returns: {
+          access_status: string
+          account_type: string
+          created_at: string
+          device_fingerprint: string | null
+          display_name: string | null
+          email: string
+          id: string
+          invitation_code_used: string | null
+          mobile_number: string | null
+          onboarding_complete: boolean
+          referral_code: string | null
+          referred_by: string | null
           review_eta: string | null
           role: string
           sign_up_ip: unknown
@@ -300,6 +374,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      my_referral_count: { Args: never; Returns: number }
       save_campaign: {
         Args: {
           p_campaign_id?: string
