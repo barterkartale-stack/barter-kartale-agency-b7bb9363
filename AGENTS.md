@@ -13,3 +13,4 @@
 - Admin powers come from `profiles.role` (not client-writable) checked inside SECURITY DEFINER functions via `is_super_admin`; never grant clients write access to `profiles`.
 
 - Managed Google sign-in only works on Lovable-hosted domains; the Google button redirects other hosts (e.g. Vercel) to the published Lovable site.
+- Account setup (Google or email, creator or partner) always finishes through the `complete_account_setup` RPC; partner invitation codes live in `agency_invite_codes` (no client access) so codes can change without a deploy.
