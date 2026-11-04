@@ -1,32 +1,82 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
-import type { Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-import { ForgotPasswordPanel, type PartnerRole } from '@/components/app/AuthPanels';
-import { OrderSearch, matchesOrder } from '@/components/app/OrderSearch';
-import { SuperAdmin } from '@/components/app/SuperAdmin';
-import { HelpCenter } from '@/components/app/HelpCenter';
-import { MarketplaceDemo } from '@/components/app/MarketplaceDemo';
-import { CampaignCard, type LiveCampaign } from '@/components/app/CampaignCard';
-import { AuthGateway, AccountSetupModal, ReferralCard, PartnerPendingScreen, completeAccountSetup, enforceKeepSignedIn, readPending, clearPending, rememberAccount, type AuthMode } from '@/components/app/AccountAuth';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { ForgotPasswordPanel, type PartnerRole } from "@/components/app/AuthPanels";
+import { OrderSearch, matchesOrder } from "@/components/app/OrderSearch";
+import { SuperAdmin } from "@/components/app/SuperAdmin";
+import { HelpCenter } from "@/components/app/HelpCenter";
+import { MarketplaceDemo } from "@/components/app/MarketplaceDemo";
+import { CampaignCard, type LiveCampaign } from "@/components/app/CampaignCard";
 import {
-  ArrowRight, BadgeCheck, BriefcaseBusiness, Check, ChevronDown, CircleHelp,
-  Clock3, FileCheck2, IndianRupee, Layers3, LayoutDashboard, LockKeyhole, LogOut,
-  Menu, PackageCheck, RotateCcw, ShieldCheck, Sparkles, Star, Target, TrendingUp,
-  Search, Upload, Users, WalletCards, X, Zap
-} from 'lucide-react';
+  AuthGateway,
+  AccountSetupModal,
+  ReferralCard,
+  PartnerPendingScreen,
+  completeAccountSetup,
+  enforceKeepSignedIn,
+  readPending,
+  clearPending,
+  rememberAccount,
+  type AuthMode,
+} from "@/components/app/AccountAuth";
+import {
+  ArrowRight,
+  BadgeCheck,
+  BriefcaseBusiness,
+  Check,
+  ChevronDown,
+  CircleHelp,
+  Clock3,
+  FileCheck2,
+  IndianRupee,
+  Layers3,
+  LayoutDashboard,
+  LockKeyhole,
+  LogOut,
+  Menu,
+  PackageCheck,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Target,
+  TrendingUp,
+  Search,
+  Upload,
+  Users,
+  WalletCards,
+  X,
+  Zap,
+} from "lucide-react";
 
-export type View = 'home' | 'campaigns' | 'about' | 'careers' | 'demo' | 'dashboard' | 'console' | 'superadmin';
+export type View =
+  "home" | "campaigns" | "about" | "careers" | "demo" | "dashboard" | "console" | "superadmin";
 type CampaignCategory = string;
-type Profile = { display_name: string | null; role: PartnerRole; onboarding_complete: boolean; referral_code: string | null; access_status: string; account_type: string; review_eta: string | null };
-type Order = { name: string; address: string; platform: string; deal: string; orderId: string; status: string };
+type Profile = {
+  display_name: string | null;
+  role: PartnerRole;
+  onboarding_complete: boolean;
+  referral_code: string | null;
+  access_status: string;
+  account_type: string;
+  review_eta: string | null;
+};
+type Order = {
+  name: string;
+  address: string;
+  platform: string;
+  deal: string;
+  orderId: string;
+  status: string;
+};
 
-const logo = '/assets/images/1003464620.png';
-const retearnLogo = '/assets/images/1003502591.png';
+const logo = "/assets/images/1003464620.png";
+const retearnLogo = "/assets/images/1003502591.png";
 
-export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
+export function BarterApp({ initialView = "home" }: { initialView?: View }) {
   const [view, setView] = useState<View>(initialView);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [category, setCategory] = useState<CampaignCategory>('All');
+  const [category, setCategory] = useState<CampaignCategory>("All");
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [googleOpen, setGoogleOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
@@ -34,17 +84,39 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [onboarding, setOnboarding] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [toast, setToast] = useState('');
+  const [toast, setToast] = useState("");
   const [liveCampaigns, setLiveCampaigns] = useState<LiveCampaign[]>([]);
 
   useEffect(() => {
-    void supabase.from('campaigns').select('*').eq('is_active', true).order('created_at', { ascending: false }).then(({ data }) => { if (data) setLiveCampaigns(data as unknown as LiveCampaign[]); });
+    void supabase
+      .from("campaigns")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setLiveCampaigns(data as unknown as LiveCampaign[]);
+      });
   }, []);
 
   useEffect(() => {
     let mounted = true;
     const loadSession = async (): Promise<void> => {
       await enforceKeepSignedIn();
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const accessToken = hash.get("access_token");
+      const refreshToken = hash.get("refresh_token");
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (!error)
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname + window.location.search,
+          );
+      }
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
       setSession(data.session);
@@ -53,37 +125,81 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
     };
     void loadSession();
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setTimeout(() => { void (async () => {
-        if (!mounted) return;
-        setSession(nextSession);
-        if (nextSession) await loadProfile(nextSession);
-        else { setProfile(null); setOnboarding(false); }
-        setAuthLoading(false);
-      })(); }, 0);
+      setTimeout(() => {
+        void (async () => {
+          if (!mounted) return;
+          setSession(nextSession);
+          if (nextSession) await loadProfile(nextSession);
+          else {
+            setProfile(null);
+            setOnboarding(false);
+          }
+          setAuthLoading(false);
+        })();
+      }, 0);
     });
-    return () => { mounted = false; listener.subscription.unsubscribe(); };
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
     if (!session) return;
     const loadOrders = async (): Promise<void> => {
-      const { data } = await supabase.from('campaign_enrollments').select('name, delivery_address, platform, campaign_type, tracking_order_id, status').order('created_at', { ascending: false });
-      if (data) setOrders(data.map((item) => ({ name: item.name, address: item.delivery_address, platform: item.platform, deal: item.campaign_type, orderId: item.tracking_order_id, status: item.status })));
+      const { data } = await supabase
+        .from("campaign_enrollments")
+        .select("name, delivery_address, platform, campaign_type, tracking_order_id, status")
+        .order("created_at", { ascending: false });
+      if (data)
+        setOrders(
+          data.map((item) => ({
+            name: item.name,
+            address: item.delivery_address,
+            platform: item.platform,
+            deal: item.campaign_type,
+            orderId: item.tracking_order_id,
+            status: item.status,
+          })),
+        );
     };
     void loadOrders();
   }, [session]);
 
   const loadProfile = async (activeSession: Session): Promise<void> => {
-    const cols = 'display_name, role, onboarding_complete, referral_code, access_status, account_type, review_eta';
-    let { data } = await supabase.from('profiles').select(cols).eq('id', activeSession.user.id).maybeSingle();
-    const meta = activeSession.user.user_metadata as { display_name?: string; mobile_number?: string; signup_mode?: AuthMode; referral_code?: string; invite_code?: string } | undefined;
+    const cols =
+      "display_name, role, onboarding_complete, referral_code, access_status, account_type, review_eta";
+    let { data } = await supabase
+      .from("profiles")
+      .select(cols)
+      .eq("id", activeSession.user.id)
+      .maybeSingle();
+    const meta = activeSession.user.user_metadata as
+      | {
+          display_name?: string;
+          mobile_number?: string;
+          signup_mode?: AuthMode;
+          referral_code?: string;
+          invite_code?: string;
+        }
+      | undefined;
     if ((!data || !data.onboarding_complete) && meta?.mobile_number) {
       const pending = readPending();
-      const mode: AuthMode = pending?.mode || meta.signup_mode || 'creator';
-      const { error } = await completeAccountSetup({ name: meta.display_name || '', mobile: meta.mobile_number, mode, referral: pending?.referral || meta.referral_code, invite: pending?.invite || meta.invite_code });
+      const mode: AuthMode = pending?.mode || meta.signup_mode || "creator";
+      const { error } = await completeAccountSetup({
+        name: meta.display_name || "",
+        mobile: meta.mobile_number,
+        mode,
+        referral: pending?.referral || meta.referral_code,
+        invite: pending?.invite || meta.invite_code,
+      });
       if (!error) {
         clearPending();
-        ({ data } = await supabase.from('profiles').select(cols).eq('id', activeSession.user.id).maybeSingle());
+        ({ data } = await supabase
+          .from("profiles")
+          .select(cols)
+          .eq("id", activeSession.user.id)
+          .maybeSingle());
       }
     }
     setProfile(data as Profile | null);
@@ -92,31 +208,47 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
       return;
     }
     setOnboarding(false);
-    rememberAccount({ email: activeSession.user.email || '', name: data.display_name || '' });
-    const after = window.sessionStorage.getItem('bk_after_login');
-    window.sessionStorage.removeItem('bk_after_login');
+    rememberAccount({ email: activeSession.user.email || "", name: data.display_name || "" });
+    const after = window.sessionStorage.getItem("bk_after_login");
+    window.sessionStorage.removeItem("bk_after_login");
     const path = after || window.location.pathname;
-    if (path === '/partner-console') { window.history.replaceState({}, '', '/partner-console'); setView('console'); setConsoleOpen(false); }
-    else if (path === '/super-admin') setView('superadmin');
-    else if (path === '/dashboard' || path === '/auth/callback') { window.history.replaceState({}, '', '/dashboard'); setView('dashboard'); }
+    if (path === "/partner-console") {
+      window.history.replaceState({}, "", "/partner-console");
+      setView("console");
+      setConsoleOpen(false);
+    } else if (path === "/super-admin") setView("superadmin");
+    else if (path === "/dashboard" || path === "/auth/callback") {
+      window.history.replaceState({}, "", "/dashboard");
+      setView("dashboard");
+    }
   };
 
   useEffect(() => {
     if (!toast) return;
-    const timeout = window.setTimeout(() => setToast(''), 3600);
+    const timeout = window.setTimeout(() => setToast(""), 3600);
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
   const goTo = (next: View) => {
-    const route = next === 'dashboard' ? '/dashboard' : next === 'console' ? '/partner-console' : next === 'superadmin' ? '/super-admin' : next === 'demo' ? '/demo' : '/';
-    window.history.pushState({}, '', route);
+    const route =
+      next === "dashboard"
+        ? "/dashboard"
+        : next === "console"
+          ? "/partner-console"
+          : next === "superadmin"
+            ? "/super-admin"
+            : next === "demo"
+              ? "/demo"
+              : "/";
+    window.history.pushState({}, "", route);
     setView(next);
     setMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const isStaff = !!profile && ['Assistant_Coordinator', 'Ground_Manager', 'Super_Admin'].includes(profile.role);
-  const isConsoleMember = !!profile && (isStaff || profile.account_type === 'partner');
+  const isStaff =
+    !!profile && ["Assistant_Coordinator", "Ground_Manager", "Super_Admin"].includes(profile.role);
+  const isConsoleMember = !!profile && (isStaff || profile.account_type === "partner");
 
   const openGoogle = () => {
     setGoogleOpen(true);
@@ -124,27 +256,31 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
   };
 
   const openConsole = () => {
-    if (isConsoleMember) { goTo('console'); return; }
+    if (isConsoleMember) {
+      goTo("console");
+      return;
+    }
     setConsoleOpen(true);
     setMenuOpen(false);
   };
 
   const handleSignOut = async (): Promise<void> => {
-    if (session?.user.email) rememberAccount({ email: session.user.email, name: profile?.display_name || '' });
+    if (session?.user.email)
+      rememberAccount({ email: session.user.email, name: profile?.display_name || "" });
     await supabase.auth.signOut();
     setProfile(null);
     setOnboarding(false);
     setOrders([]);
-    setView('home');
-    window.history.pushState({}, '', '/');
-    setToast('You have been signed out.');
+    setView("home");
+    window.history.pushState({}, "", "/");
+    setToast("You have been signed out.");
   };
 
   const completeOnboarding = async (): Promise<void> => {
     setOnboarding(false);
     if (session) await loadProfile(session);
-    setView('dashboard');
-    setToast('Your partner profile is ready.');
+    setView("dashboard");
+    setToast("Your partner profile is ready.");
   };
 
   const submitOrder = async (order: Order): Promise<void> => {
@@ -152,21 +288,36 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
       setGoogleOpen(true);
       return;
     }
-    const { error } = await supabase.from('campaign_enrollments').insert({ name: order.name, delivery_address: order.address, platform: order.platform, campaign_type: order.deal, tracking_order_id: order.orderId });
+    const { error } = await supabase
+      .from("campaign_enrollments")
+      .insert({
+        name: order.name,
+        delivery_address: order.address,
+        platform: order.platform,
+        campaign_type: order.deal,
+        tracking_order_id: order.orderId,
+      });
     if (error) {
-      setToast('We could not save this enrollment. Please try again.');
+      setToast("We could not save this enrollment. Please try again.");
       return;
     }
-    setOrders((current) => [{ ...order, status: 'received' }, ...current]);
-    setToast('Order form submitted. Your campaign brief is ready.');
+    setOrders((current) => [{ ...order, status: "received" }, ...current]);
+    setToast("Order form submitted. Your campaign brief is ready.");
   };
 
-  const submitRefund = async (refund: { enrollmentId: string | null; name: string; platform: string; campaignType: string; upiId: string; proofFilename: string | null }): Promise<void> => {
+  const submitRefund = async (refund: {
+    enrollmentId: string | null;
+    name: string;
+    platform: string;
+    campaignType: string;
+    upiId: string;
+    proofFilename: string | null;
+  }): Promise<void> => {
     if (!session) {
       setGoogleOpen(true);
       return;
     }
-    const { error } = await supabase.from('refunds').insert({
+    const { error } = await supabase.from("refunds").insert({
       enrollment_id: refund.enrollmentId,
       name: refund.name,
       platform: refund.platform,
@@ -175,161 +326,1505 @@ export function BarterApp({ initialView = 'home' }: { initialView?: View }) {
       proof_filename: refund.proofFilename,
     });
     if (error) {
-      setToast('We could not save this refund submission. Please try again.');
+      setToast("We could not save this refund submission. Please try again.");
       return;
     }
-    setToast('Refund form submitted. Your verification is in review.');
+    setToast("Refund form submitted. Your verification is in review.");
   };
 
-  if (authLoading) return <div className="auth-loading"><img src={logo} alt="BarterKartale" /><span>Securing your partner session…</span></div>;
+  if (authLoading)
+    return (
+      <div className="auth-loading">
+        <img src={logo} alt="BarterKartale" />
+        <span>Securing your partner session…</span>
+      </div>
+    );
 
   const onDashboard = session && profile && profile.onboarding_complete;
 
   return (
     <div className="app-shell">
       <header className="site-header">
-        <button className="brand" onClick={() => goTo('home')} aria-label="Go to BarterKartale home">
+        <button
+          className="brand"
+          onClick={() => goTo("home")}
+          aria-label="Go to BarterKartale home"
+        >
           <img src={logo} alt="BarterKartale" />
-          <span><b>Barter</b>Kartale</span>
+          <span>
+            <b>Barter</b>Kartale
+          </span>
         </button>
-        <nav className={menuOpen ? 'main-nav open' : 'main-nav'}>
-          {(['home', 'campaigns', 'about', 'careers', 'demo'] as View[]).map((item) => (
-            <button key={item} className={view === item ? 'nav-link active' : 'nav-link'} onClick={() => goTo(item)}>
-              {item === 'home' ? 'Home' : item === 'campaigns' ? 'Active Campaigns' : item === 'about' ? 'About Us' : item === 'careers' ? 'Careers' : 'Try Demo'}
+        <nav className={menuOpen ? "main-nav open" : "main-nav"}>
+          {(["home", "campaigns", "about", "careers", "demo"] as View[]).map((item) => (
+            <button
+              key={item}
+              className={view === item ? "nav-link active" : "nav-link"}
+              onClick={() => goTo(item)}
+            >
+              {item === "home"
+                ? "Home"
+                : item === "campaigns"
+                  ? "Active Campaigns"
+                  : item === "about"
+                    ? "About Us"
+                    : item === "careers"
+                      ? "Careers"
+                      : "Try Demo"}
             </button>
           ))}
         </nav>
         <div className="header-actions">
-          <span className="status-dot"><i /> accepting partners</span>
+          <span className="status-dot">
+            <i /> accepting partners
+          </span>
           {onDashboard ? (
             <>
-              <button className="sign-in-button" onClick={() => goTo('dashboard')}><LayoutDashboard size={15} /> Dashboard</button>
-              <button className="sign-out-button" onClick={handleSignOut}><LogOut size={15} /> Sign Out</button>
+              <button className="sign-in-button" onClick={() => goTo("dashboard")}>
+                <LayoutDashboard size={15} /> Dashboard
+              </button>
+              <button className="sign-out-button" onClick={handleSignOut}>
+                <LogOut size={15} /> Sign Out
+              </button>
             </>
           ) : (
-            <button className="sign-in-button" onClick={openGoogle}><LockKeyhole size={15} /> Sign In</button>
+            <button className="sign-in-button" onClick={openGoogle}>
+              <LockKeyhole size={15} /> Sign In
+            </button>
           )}
-          <button className="console-button" onClick={openConsole}><LockKeyhole size={15} /> Partner Console</button>
-          <button className="menu-button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle navigation">{menuOpen ? <X /> : <Menu />}</button>
+          <button className="console-button" onClick={openConsole}>
+            <LockKeyhole size={15} /> Partner Console
+          </button>
+          <button
+            className="menu-button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label="Toggle navigation"
+          >
+            {menuOpen ? <X /> : <Menu />}
+          </button>
         </div>
       </header>
 
       <main>
-        {view === 'home' && <Home campaigns={liveCampaigns} onExplore={() => goTo('campaigns')} onStart={() => goTo('campaigns')} onGoogle={openGoogle} onConsole={openConsole} />}
-        {view === 'campaigns' && <Campaigns campaigns={liveCampaigns} category={category} setCategory={setCategory} onBook={() => goTo('home')} />}
-        {view === 'about' && <About />}
-        {view === 'careers' && <Careers onSubmit={() => setToast('Application saved. Our team will review your profile shortly.')} />}
-        {view === 'demo' && <MarketplaceDemo />}
-        {view === 'dashboard' && onDashboard && <PublicDashboard orders={orders} onOrder={submitOrder} onRefund={submitRefund} onSignOut={handleSignOut} displayName={profile!.display_name || session!.user.email || 'Partner'} />}
-        {view === 'dashboard' && onDashboard && <section className="section-wrap"><ReferralCard code={profile!.referral_code} /></section>}
-        {view === 'console' && profile && !isStaff && profile.access_status === 'pending' && <PartnerPendingScreen reviewEta={profile.review_eta} onSignOut={handleSignOut} />}
-        {view === 'console' && profile && isConsoleMember && profile.access_status === 'active' && <PartnerConsole orders={orders} onOrder={submitOrder} onRefund={submitRefund} onSignOut={handleSignOut} role={profile.role} />}
-        {view === 'console' && !isConsoleMember && <section className="section-wrap console-page"><div className="pending-card"><LockKeyhole size={28} /><div className="section-kicker">PRIVATE PARTNER CONSOLE</div><h1>Partner <em>access.</em></h1><p>Sign in or join with your agency invitation code.</p><button className="primary-button" onClick={() => setConsoleOpen(true)}>Open Partner Console <ArrowRight size={16} /></button></div></section>}
-        {view === 'superadmin' && !(profile && profile.role === 'Super_Admin') && <section className="section-wrap console-page"><div className="pending-card"><ShieldCheck size={28} /><div className="section-kicker">SUPER-ADMIN</div><h1>Restricted <em>access.</em></h1><p>Sign in with an authorised admin account to open the admin panel.</p>{!session && <button className="primary-button" onClick={openGoogle}>Sign In <ArrowRight size={16} /></button>}</div></section>}
-        {view === 'superadmin' && profile && profile.role === 'Super_Admin' && <SuperAdmin onSignOut={handleSignOut} displayName={profile.display_name || session!.user.email || 'Admin'} />}
+        {view === "home" && (
+          <Home
+            campaigns={liveCampaigns}
+            onExplore={() => goTo("campaigns")}
+            onStart={() => goTo("campaigns")}
+            onGoogle={openGoogle}
+            onConsole={openConsole}
+          />
+        )}
+        {view === "campaigns" && (
+          <Campaigns
+            campaigns={liveCampaigns}
+            category={category}
+            setCategory={setCategory}
+            onBook={() => goTo("home")}
+          />
+        )}
+        {view === "about" && <About />}
+        {view === "careers" && (
+          <Careers
+            onSubmit={() =>
+              setToast("Application saved. Our team will review your profile shortly.")
+            }
+          />
+        )}
+        {view === "demo" && <MarketplaceDemo />}
+        {view === "dashboard" && onDashboard && (
+          <PublicDashboard
+            orders={orders}
+            onOrder={submitOrder}
+            onRefund={submitRefund}
+            onSignOut={handleSignOut}
+            displayName={profile!.display_name || session!.user.email || "Partner"}
+          />
+        )}
+        {view === "dashboard" && onDashboard && (
+          <section className="section-wrap">
+            <ReferralCard code={profile!.referral_code} />
+          </section>
+        )}
+        {view === "console" && profile && !isStaff && profile.access_status === "pending" && (
+          <PartnerPendingScreen reviewEta={profile.review_eta} onSignOut={handleSignOut} />
+        )}
+        {view === "console" && profile && isConsoleMember && profile.access_status === "active" && (
+          <PartnerConsole
+            orders={orders}
+            onOrder={submitOrder}
+            onRefund={submitRefund}
+            onSignOut={handleSignOut}
+            role={profile.role}
+          />
+        )}
+        {view === "console" && !isConsoleMember && (
+          <section className="section-wrap console-page">
+            <div className="pending-card">
+              <LockKeyhole size={28} />
+              <div className="section-kicker">PRIVATE PARTNER CONSOLE</div>
+              <h1>
+                Partner <em>access.</em>
+              </h1>
+              <p>Sign in or join with your agency invitation code.</p>
+              <button className="primary-button" onClick={() => setConsoleOpen(true)}>
+                Open Partner Console <ArrowRight size={16} />
+              </button>
+            </div>
+          </section>
+        )}
+        {view === "superadmin" && !(profile && profile.role === "Super_Admin") && (
+          <section className="section-wrap console-page">
+            <div className="pending-card">
+              <ShieldCheck size={28} />
+              <div className="section-kicker">SUPER-ADMIN</div>
+              <h1>
+                Restricted <em>access.</em>
+              </h1>
+              <p>Sign in with an authorised admin account to open the admin panel.</p>
+              {!session && (
+                <button className="primary-button" onClick={openGoogle}>
+                  Sign In <ArrowRight size={16} />
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+        {view === "superadmin" && profile && profile.role === "Super_Admin" && (
+          <SuperAdmin
+            onSignOut={handleSignOut}
+            displayName={profile.display_name || session!.user.email || "Admin"}
+          />
+        )}
       </main>
 
       <footer className="site-footer">
-        <div className="footer-brand"><img src={logo} alt="" /><span>BarterKartale</span></div>
+        <div className="footer-brand">
+          <img src={logo} alt="" />
+          <span>BarterKartale</span>
+        </div>
         <p>Real products. Clear rules. Better partnerships.</p>
-        <div className="footer-note"><ShieldCheck size={15} /> Built around transparent creator commerce</div>
+        <div className="footer-note">
+          <ShieldCheck size={15} /> Built around transparent creator commerce
+        </div>
       </footer>
 
-      {googleOpen && <AuthModal mode="creator" onClose={() => setGoogleOpen(false)} onError={(message) => setToast(message)} />}
-      {consoleOpen && <AuthModal mode="partner" onClose={() => setConsoleOpen(false)} onError={(message) => setToast(message)} />}
-      {onboarding && session && <AccountSetupModal session={session} onComplete={completeOnboarding} onError={(message) => setToast(message)} />}
-      {toast && <div className="toast"><BadgeCheck size={18} /><span>{toast}</span><button onClick={() => setToast('')}><X size={15} /></button></div>}
+      {googleOpen && (
+        <AuthModal
+          mode="creator"
+          onClose={() => setGoogleOpen(false)}
+          onError={(message) => setToast(message)}
+        />
+      )}
+      {consoleOpen && (
+        <AuthModal
+          mode="partner"
+          onClose={() => setConsoleOpen(false)}
+          onError={(message) => setToast(message)}
+        />
+      )}
+      {onboarding && session && (
+        <AccountSetupModal
+          session={session}
+          onComplete={completeOnboarding}
+          onError={(message) => setToast(message)}
+        />
+      )}
+      {toast && (
+        <div className="toast">
+          <BadgeCheck size={18} />
+          <span>{toast}</span>
+          <button onClick={() => setToast("")}>
+            <X size={15} />
+          </button>
+        </div>
+      )}
       <HelpCenter />
     </div>
   );
 }
 
-function Home({ campaigns, onExplore, onStart, onGoogle, onConsole }: { campaigns: LiveCampaign[]; onExplore: () => void; onStart: () => void; onGoogle: () => void; onConsole: () => void }) {
-  return <>
-    <section className="hero section-wrap">
-      <div className="hero-copy">
-        <div className="eyebrow"><span className="eyebrow-line" /> CREATOR COMMERCE, REIMAGINED</div>
-        <h1>India's premier <em>influencer collaboration</em> & brand promotion network.</h1>
-        <p className="hero-lede">We partner with top-tier brands across Amazon, Flipkart, Myntra, and Meesho. Discover product sponsorships and beta-testing campaigns with zero followers required.</p>
-        <div className="hero-actions"><button className="primary-button" onClick={onExplore}>Explore campaigns <ArrowRight size={17} /></button><button className="text-button" onClick={onGoogle}>Continue with Google <ChevronDown size={16} /></button></div>
-        <div className="trust-row"><div className="avatars"><span>AK</span><span>NS</span><span>RM</span><span>+</span></div><div><div className="stars"><Star size={13} fill="currentColor" /><Star size={13} fill="currentColor" /><Star size={13} fill="currentColor" /><Star size={13} fill="currentColor" /><Star size={13} fill="currentColor" /></div><strong>Trusted by 2,400+ partners</strong></div></div>
+function Home({
+  campaigns,
+  onExplore,
+  onStart,
+  onGoogle,
+  onConsole,
+}: {
+  campaigns: LiveCampaign[];
+  onExplore: () => void;
+  onStart: () => void;
+  onGoogle: () => void;
+  onConsole: () => void;
+}) {
+  return (
+    <>
+      <section className="hero section-wrap">
+        <div className="hero-copy">
+          <div className="eyebrow">
+            <span className="eyebrow-line" /> CREATOR COMMERCE, REIMAGINED
+          </div>
+          <h1>
+            India's premier <em>influencer collaboration</em> & brand promotion network.
+          </h1>
+          <p className="hero-lede">
+            We partner with top-tier brands across Amazon, Flipkart, Myntra, and Meesho. Discover
+            product sponsorships and beta-testing campaigns with zero followers required.
+          </p>
+          <div className="hero-actions">
+            <button className="primary-button" onClick={onExplore}>
+              Explore campaigns <ArrowRight size={17} />
+            </button>
+            <button className="text-button" onClick={onGoogle}>
+              Continue with Google <ChevronDown size={16} />
+            </button>
+          </div>
+          <div className="trust-row">
+            <div className="avatars">
+              <span>AK</span>
+              <span>NS</span>
+              <span>RM</span>
+              <span>+</span>
+            </div>
+            <div>
+              <div className="stars">
+                <Star size={13} fill="currentColor" />
+                <Star size={13} fill="currentColor" />
+                <Star size={13} fill="currentColor" />
+                <Star size={13} fill="currentColor" />
+                <Star size={13} fill="currentColor" />
+              </div>
+              <strong>Trusted by 2,400+ partners</strong>
+            </div>
+          </div>
+        </div>
+        <div className="hero-visual">
+          <div className="visual-orbit orbit-one" />
+          <div className="visual-orbit orbit-two" />
+          {campaigns[0] ? (
+            <div className="hero-card main-product">
+              <div className="product-top">
+                <span>LIVE DROP · {String(campaigns.length).padStart(2, "0")}</span>
+                <span className="green-pill">OPEN</span>
+              </div>
+              {campaigns[0].image_url ? (
+                <img
+                  className="hero-product-photo"
+                  src={campaigns[0].image_url}
+                  alt={campaigns[0].name}
+                />
+              ) : (
+                <div className="earbuds">
+                  <span />
+                  <span />
+                </div>
+              )}
+              <p>{campaigns[0].name}</p>
+              {campaigns[0].product_value && <strong>{campaigns[0].product_value} value</strong>}
+              <small>
+                {campaigns[0].platform} · {campaigns[0].category}
+              </small>
+              <div className="card-progress">
+                <i />
+              </div>
+              <div className="card-footer">
+                <span>
+                  {campaigns[0].slots_left !== null
+                    ? `${campaigns[0].slots_left} slots left`
+                    : "Open now"}
+                </span>
+                <span>{campaigns[0].brand || ""}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="hero-card main-product">
+              <div className="product-top">
+                <span>NEXT DROP</span>
+                <span className="green-pill">SOON</span>
+              </div>
+              <div className="earbuds">
+                <span />
+                <span />
+              </div>
+              <p>New drops arriving soon</p>
+              <small>Fresh brand campaigns are being set up.</small>
+            </div>
+          )}
+          <div className="floating-stat stat-one">
+            <span className="icon-box mint">
+              <TrendingUp size={17} />
+            </span>
+            <div>
+              <small>Partner earnings</small>
+              <strong>₹18,420</strong>
+            </div>
+            <span className="up-label">+24%</span>
+          </div>
+          <div className="floating-stat stat-two">
+            <span className="icon-box dark">
+              <PackageCheck size={17} />
+            </span>
+            <div>
+              <small>Products delivered</small>
+              <strong>1,284</strong>
+            </div>
+          </div>
+          <div className="micro-label label-one">
+            01 <span>DISCOVER</span>
+          </div>
+          <div className="micro-label label-two">
+            02 <span>COLLABORATE</span>
+          </div>
+        </div>
+      </section>
+      {campaigns.length > 0 && (
+        <section className="marquee-band">
+          <div className="marquee-track">
+            {[...campaigns, ...campaigns].map((c, index) => (
+              <span key={`${c.id}-${index}`}>
+                <i /> {(c.brand || c.name).toUpperCase()}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+      <section className="section-wrap intro-section">
+        <div className="section-kicker">WHY BARTERKARTALE</div>
+        <div className="intro-grid">
+          <h2>
+            Where brands meet
+            <br />
+            <em>the next voice.</em>
+          </h2>
+          <div>
+            <p>
+              We make product collaborations feel less like paperwork and more like progress. Browse
+              curated campaigns, follow clear verification steps, and build a track record brands
+              can trust.
+            </p>
+            <button className="underlined-link" onClick={onStart}>
+              See how it works <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+        <div className="feature-row">
+          <Feature
+            icon={<Target />}
+            number="01"
+            title="Curated campaigns"
+            text="Thoughtful product drops matched to real communities."
+          />
+          <Feature
+            icon={<FileCheck2 />}
+            number="02"
+            title="Clear verification"
+            text="Simple steps, transparent timelines, no hidden surprises."
+          />
+          <Feature
+            icon={<WalletCards />}
+            number="03"
+            title="Fair outcomes"
+            text="Keep products or earn responsibly through approved campaigns."
+          />
+        </div>
+      </section>
+      <section className="dark-preview">
+        <div className="section-wrap preview-grid">
+          <div>
+            <div className="eyebrow light">
+              <span className="eyebrow-line" /> THE RET-EARN MODEL
+            </div>
+            <h2>
+              Beta testing
+              <br />
+              built on <em>trust.</em>
+            </h2>
+            <p>
+              For approved partners, Ret-Earn makes milestone verification easier to understand:
+              complete the agreed brief, upload authentic proof, and get reviewed on a clear
+              timeline.
+            </p>
+            <button className="outline-light" onClick={onConsole}>
+              Enter Partner Console <ArrowRight size={16} />
+            </button>
+          </div>
+          <div className="retearn-card">
+            <div className="retearn-heading">
+              <img src={retearnLogo} alt="Ret-Earn" />
+              <span>PARTNER VIEW</span>
+            </div>
+            <div className="earn-amount">
+              <small>AVAILABLE THIS WEEK</small>
+              <strong>₹12,840</strong>
+              <span>
+                <TrendingUp size={14} /> 18.6% from last week
+              </span>
+            </div>
+            <div className="mini-chart">
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+            </div>
+            <div className="retearn-footer">
+              <span>
+                <span className="live-dot" /> 3 live tasks
+              </span>
+              <span>Updated moments ago</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="section-wrap campaign-preview">
+        <div className="section-heading">
+          <div>
+            <div className="section-kicker">OPEN NOW</div>
+            <h2>
+              Find your next <em>collab.</em>
+            </h2>
+          </div>
+          <button className="underlined-link" onClick={onExplore}>
+            View all campaigns <ArrowRight size={16} />
+          </button>
+        </div>
+        <div className="campaign-grid">
+          {campaigns.length === 0 ? (
+            <EmptyDrops />
+          ) : (
+            campaigns
+              .slice(0, 3)
+              .map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} />)
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function Feature({
+  icon,
+  number,
+  title,
+  text,
+}: {
+  icon: React.ReactNode;
+  number: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="feature">
+      <div className="feature-icon">{icon}</div>
+      <span className="feature-number">{number}</span>
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </div>
+  );
+}
+
+function EmptyDrops() {
+  return (
+    <div className="empty-state drops-empty">
+      <Sparkles size={30} />
+      <strong>New drops arriving soon</strong>
+      <p>Live brand campaigns will appear here as soon as they open.</p>
+    </div>
+  );
+}
+
+function Campaigns({
+  campaigns,
+  category,
+  setCategory,
+}: {
+  campaigns: LiveCampaign[];
+  category: CampaignCategory;
+  setCategory: (category: CampaignCategory) => void;
+  onBook: () => void;
+}) {
+  const categories = ["All", ...Array.from(new Set(campaigns.map((c) => c.category)))];
+  const filtered =
+    category === "All" ? campaigns : campaigns.filter((item) => item.category === category);
+  return (
+    <section className="section-wrap page-section">
+      <div className="page-intro">
+        <div>
+          <div className="eyebrow">
+            <span className="eyebrow-line" /> ACTIVE CAMPAIGNS
+          </div>
+          <h1>
+            Choose a brief that
+            <br />
+            <em>fits your world.</em>
+          </h1>
+        </div>
+        <p>
+          Every drop has a clear brief, a real product, and a transparent path from order to
+          verification.
+        </p>
       </div>
-      <div className="hero-visual">
-        <div className="visual-orbit orbit-one" /><div className="visual-orbit orbit-two" />
-        {campaigns[0] ? <div className="hero-card main-product"><div className="product-top"><span>LIVE DROP · {String(campaigns.length).padStart(2, '0')}</span><span className="green-pill">OPEN</span></div>{campaigns[0].image_url ? <img className="hero-product-photo" src={campaigns[0].image_url} alt={campaigns[0].name} /> : <div className="earbuds"><span /><span /></div>}<p>{campaigns[0].name}</p>{campaigns[0].product_value && <strong>{campaigns[0].product_value} value</strong>}<small>{campaigns[0].platform} · {campaigns[0].category}</small><div className="card-progress"><i /></div><div className="card-footer"><span>{campaigns[0].slots_left !== null ? `${campaigns[0].slots_left} slots left` : 'Open now'}</span><span>{campaigns[0].brand || ''}</span></div></div> : <div className="hero-card main-product"><div className="product-top"><span>NEXT DROP</span><span className="green-pill">SOON</span></div><div className="earbuds"><span /><span /></div><p>New drops arriving soon</p><small>Fresh brand campaigns are being set up.</small></div>}
-        <div className="floating-stat stat-one"><span className="icon-box mint"><TrendingUp size={17} /></span><div><small>Partner earnings</small><strong>₹18,420</strong></div><span className="up-label">+24%</span></div>
-        <div className="floating-stat stat-two"><span className="icon-box dark"><PackageCheck size={17} /></span><div><small>Products delivered</small><strong>1,284</strong></div></div>
-        <div className="micro-label label-one">01 <span>DISCOVER</span></div><div className="micro-label label-two">02 <span>COLLABORATE</span></div>
+      <div className="filter-bar">
+        <div>
+          {categories.map((item) => (
+            <button
+              className={category === item ? "filter active" : "filter"}
+              key={item}
+              onClick={() => setCategory(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+        <span>
+          <span className="live-dot" /> {filtered.length} campaigns available
+        </span>
+      </div>
+      <div className="campaign-grid full">
+        {filtered.length === 0 ? (
+          <EmptyDrops />
+        ) : (
+          filtered.map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} />)
+        )}
+      </div>
+      <div className="responsible-note">
+        <ShieldCheck size={20} />
+        <div>
+          <strong>Responsible collaboration, always.</strong>
+          <p>
+            Campaigns are based on authentic experiences and approved briefs. No paid fake reviews,
+            manipulated ratings, or off-platform pressure.
+          </p>
+        </div>
       </div>
     </section>
-    {campaigns.length > 0 && <section className="marquee-band"><div className="marquee-track">{[...campaigns, ...campaigns].map((c, index) => <span key={`${c.id}-${index}`}><i /> {(c.brand || c.name).toUpperCase()}</span>)}</div></section>}
-    <section className="section-wrap intro-section"><div className="section-kicker">WHY BARTERKARTALE</div><div className="intro-grid"><h2>Where brands meet<br /><em>the next voice.</em></h2><div><p>We make product collaborations feel less like paperwork and more like progress. Browse curated campaigns, follow clear verification steps, and build a track record brands can trust.</p><button className="underlined-link" onClick={onStart}>See how it works <ArrowRight size={16} /></button></div></div><div className="feature-row"><Feature icon={<Target />} number="01" title="Curated campaigns" text="Thoughtful product drops matched to real communities." /><Feature icon={<FileCheck2 />} number="02" title="Clear verification" text="Simple steps, transparent timelines, no hidden surprises." /><Feature icon={<WalletCards />} number="03" title="Fair outcomes" text="Keep products or earn responsibly through approved campaigns." /></div></section>
-    <section className="dark-preview"><div className="section-wrap preview-grid"><div><div className="eyebrow light"><span className="eyebrow-line" /> THE RET-EARN MODEL</div><h2>Beta testing<br />built on <em>trust.</em></h2><p>For approved partners, Ret-Earn makes milestone verification easier to understand: complete the agreed brief, upload authentic proof, and get reviewed on a clear timeline.</p><button className="outline-light" onClick={onConsole}>Enter Partner Console <ArrowRight size={16} /></button></div><div className="retearn-card"><div className="retearn-heading"><img src={retearnLogo} alt="Ret-Earn" /><span>PARTNER VIEW</span></div><div className="earn-amount"><small>AVAILABLE THIS WEEK</small><strong>₹12,840</strong><span><TrendingUp size={14} /> 18.6% from last week</span></div><div className="mini-chart"><i /><i /><i /><i /><i /><i /><i /></div><div className="retearn-footer"><span><span className="live-dot" /> 3 live tasks</span><span>Updated moments ago</span></div></div></div></section>
-    <section className="section-wrap campaign-preview"><div className="section-heading"><div><div className="section-kicker">OPEN NOW</div><h2>Find your next <em>collab.</em></h2></div><button className="underlined-link" onClick={onExplore}>View all campaigns <ArrowRight size={16} /></button></div><div className="campaign-grid">{campaigns.length === 0 ? <EmptyDrops /> : campaigns.slice(0, 3).map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} />)}</div></section>
-  </>;
+  );
 }
 
-function Feature({ icon, number, title, text }: { icon: React.ReactNode; number: string; title: string; text: string }) { return <div className="feature"><div className="feature-icon">{icon}</div><span className="feature-number">{number}</span><h3>{title}</h3><p>{text}</p></div>; }
+function About() {
+  return (
+    <section className="section-wrap page-section about-page">
+      <div className="page-intro">
+        <div>
+          <div className="eyebrow">
+            <span className="eyebrow-line" /> OUR POINT OF VIEW
+          </div>
+          <h1>
+            Better commerce
+            <br />
+            <em>starts with clarity.</em>
+          </h1>
+        </div>
+        <p>
+          BarterKartale sits between brands and communities, making product discovery more human and
+          creator work more sustainable.
+        </p>
+      </div>
+      <div className="about-hero">
+        <div className="about-number">
+          02 <span>/ 04</span>
+        </div>
+        <div>
+          <h2>
+            Not just another
+            <br />
+            campaign marketplace.
+          </h2>
+          <p>
+            We care about the details that make partnerships last: honest product feedback,
+            respectful timelines, and payouts that arrive when the work is genuinely complete.
+          </p>
+        </div>
+        <div className="about-stamp">
+          <Sparkles size={25} />
+          <span>
+            MADE FOR
+            <br />
+            <b>REAL PEOPLE</b>
+          </span>
+        </div>
+      </div>
+      <div className="values-grid">
+        <div>
+          <span>01</span>
+          <h3>Human first</h3>
+          <p>We build around how people actually discover, test, and talk about products.</p>
+        </div>
+        <div>
+          <span>02</span>
+          <h3>Built for trust</h3>
+          <p>
+            Clear briefs and transparent review checkpoints protect every side of the collaboration.
+          </p>
+        </div>
+        <div>
+          <span>03</span>
+          <h3>Always evolving</h3>
+          <p>
+            From campus communities to digital creators, we keep opening new doors to opportunity.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-function EmptyDrops() { return <div className="empty-state drops-empty"><Sparkles size={30} /><strong>New drops arriving soon</strong><p>Live brand campaigns will appear here as soon as they open.</p></div>; }
+function Careers({ onSubmit }: { onSubmit: () => void }) {
+  const [submitted, setSubmitted] = useState(false);
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitted(true);
+    onSubmit();
+  };
+  return (
+    <section className="section-wrap page-section careers-page">
+      <div className="page-intro">
+        <div>
+          <div className="eyebrow">
+            <span className="eyebrow-line" /> COME BUILD WITH US
+          </div>
+          <h1>
+            Make product discovery
+            <br />
+            <em>more human.</em>
+          </h1>
+        </div>
+        <p>
+          We're growing a thoughtful, curious team across campuses, creator communities, and brand
+          partnerships.
+        </p>
+      </div>
+      <div className="career-grid">
+        <div className="role-list">
+          <Role
+            icon={<Users />}
+            title="Campus Ambassadors"
+            text="Build a trusted local circle and earn from the communities you grow."
+            tag="Community"
+          />
+          <Role
+            icon={<Zap />}
+            title="Verified Digital Product Testers"
+            text="Bring your eye for detail to product stories that feel genuinely useful."
+            tag="Creator"
+          />
+          <Role
+            icon={<FileCheck2 />}
+            title="Assistant Coordinator"
+            text="Audit local networks and verify task media assets, including rating screen-recordings and proof uploads, against approved campaign briefs."
+            tag="Operations"
+          />
+          <Role
+            icon={<BriefcaseBusiness />}
+            title="Ground Managers"
+            text="Help campaigns run smoothly from first brief to final verification."
+            tag="Leadership"
+          />
+        </div>
+        <form className="application-card" onSubmit={handleSubmit}>
+          <div className="section-kicker">YOUR NEXT CHAPTER</div>
+          <h2>
+            Tell us a little
+            <br />
+            <em>about yourself.</em>
+          </h2>
+          {submitted ? (
+            <div className="success-panel">
+              <BadgeCheck size={30} />
+              <strong>Application received</strong>
+              <p>We'll be in touch if there's a fit for the next cohort.</p>
+            </div>
+          ) : (
+            <>
+              <label>
+                Full name
+                <input required placeholder="Your name" />
+              </label>
+              <label>
+                Phone or email
+                <input required placeholder="How can we reach you?" />
+              </label>
+              <label>
+                Which role feels right?{" "}
+                <select defaultValue="">
+                  <option value="" disabled>
+                    Select a role
+                  </option>
+                  <option>Campus Ambassador</option>
+                  <option>Verified Digital Product Tester</option>
+                  <option>Assistant Coordinator</option>
+                  <option>Ground Manager</option>
+                </select>
+              </label>
+              <button className="primary-button" type="submit">
+                Send application <ArrowRight size={16} />
+              </button>
+            </>
+          )}
+        </form>
+      </div>
+      <div className="zero-tolerance">
+        <ShieldCheck size={22} />
+        <div>
+          <strong>Trust is non-negotiable.</strong>
+          <p>
+            Authentic submissions only. Misleading screenshots, altered timelines, seller
+            manipulation, or fabricated experiences are not part of our community and can lead to
+            permanent removal.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-function Campaigns({ campaigns, category, setCategory }: { campaigns: LiveCampaign[]; category: CampaignCategory; setCategory: (category: CampaignCategory) => void; onBook: () => void }) { const categories = ['All', ...Array.from(new Set(campaigns.map((c) => c.category)))]; const filtered = category === 'All' ? campaigns : campaigns.filter((item) => item.category === category); return <section className="section-wrap page-section"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> ACTIVE CAMPAIGNS</div><h1>Choose a brief that<br /><em>fits your world.</em></h1></div><p>Every drop has a clear brief, a real product, and a transparent path from order to verification.</p></div><div className="filter-bar"><div>{categories.map((item) => <button className={category === item ? 'filter active' : 'filter'} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><span><span className="live-dot" /> {filtered.length} campaigns available</span></div><div className="campaign-grid full">{filtered.length === 0 ? <EmptyDrops /> : filtered.map((campaign) => <CampaignCard key={campaign.id} campaign={campaign} />)}</div><div className="responsible-note"><ShieldCheck size={20} /><div><strong>Responsible collaboration, always.</strong><p>Campaigns are based on authentic experiences and approved briefs. No paid fake reviews, manipulated ratings, or off-platform pressure.</p></div></div></section>; }
+function Role({
+  icon,
+  title,
+  text,
+  tag,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  text: string;
+  tag: string;
+}) {
+  return (
+    <div className="role-row">
+      <div className="role-icon">{icon}</div>
+      <div>
+        <span>{tag}</span>
+        <h3>{title}</h3>
+        <p>{text}</p>
+      </div>
+      <ArrowRight size={19} />
+    </div>
+  );
+}
 
-function About() { return <section className="section-wrap page-section about-page"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> OUR POINT OF VIEW</div><h1>Better commerce<br /><em>starts with clarity.</em></h1></div><p>BarterKartale sits between brands and communities, making product discovery more human and creator work more sustainable.</p></div><div className="about-hero"><div className="about-number">02 <span>/ 04</span></div><div><h2>Not just another<br />campaign marketplace.</h2><p>We care about the details that make partnerships last: honest product feedback, respectful timelines, and payouts that arrive when the work is genuinely complete.</p></div><div className="about-stamp"><Sparkles size={25} /><span>MADE FOR<br /><b>REAL PEOPLE</b></span></div></div><div className="values-grid"><div><span>01</span><h3>Human first</h3><p>We build around how people actually discover, test, and talk about products.</p></div><div><span>02</span><h3>Built for trust</h3><p>Clear briefs and transparent review checkpoints protect every side of the collaboration.</p></div><div><span>03</span><h3>Always evolving</h3><p>From campus communities to digital creators, we keep opening new doors to opportunity.</p></div></div></section>; }
-
-function Careers({ onSubmit }: { onSubmit: () => void }) { const [submitted, setSubmitted] = useState(false); const handleSubmit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); setSubmitted(true); onSubmit(); }; return <section className="section-wrap page-section careers-page"><div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line" /> COME BUILD WITH US</div><h1>Make product discovery<br /><em>more human.</em></h1></div><p>We're growing a thoughtful, curious team across campuses, creator communities, and brand partnerships.</p></div><div className="career-grid"><div className="role-list"><Role icon={<Users />} title="Campus Ambassadors" text="Build a trusted local circle and earn from the communities you grow." tag="Community" /><Role icon={<Zap />} title="Verified Digital Product Testers" text="Bring your eye for detail to product stories that feel genuinely useful." tag="Creator" /><Role icon={<FileCheck2 />} title="Assistant Coordinator" text="Audit local networks and verify task media assets, including rating screen-recordings and proof uploads, against approved campaign briefs." tag="Operations" /><Role icon={<BriefcaseBusiness />} title="Ground Managers" text="Help campaigns run smoothly from first brief to final verification." tag="Leadership" /></div><form className="application-card" onSubmit={handleSubmit}><div className="section-kicker">YOUR NEXT CHAPTER</div><h2>Tell us a little<br /><em>about yourself.</em></h2>{submitted ? <div className="success-panel"><BadgeCheck size={30} /><strong>Application received</strong><p>We'll be in touch if there's a fit for the next cohort.</p></div> : <><label>Full name<input required placeholder="Your name" /></label><label>Phone or email<input required placeholder="How can we reach you?" /></label><label>Which role feels right? <select defaultValue=""><option value="" disabled>Select a role</option><option>Campus Ambassador</option><option>Verified Digital Product Tester</option><option>Assistant Coordinator</option><option>Ground Manager</option></select></label><button className="primary-button" type="submit">Send application <ArrowRight size={16} /></button></>}</form></div><div className="zero-tolerance"><ShieldCheck size={22} /><div><strong>Trust is non-negotiable.</strong><p>Authentic submissions only. Misleading screenshots, altered timelines, seller manipulation, or fabricated experiences are not part of our community and can lead to permanent removal.</p></div></div></section>; }
-
-function Role({ icon, title, text, tag }: { icon: React.ReactNode; title: string; text: string; tag: string }) { return <div className="role-row"><div className="role-icon">{icon}</div><div><span>{tag}</span><h3>{title}</h3><p>{text}</p></div><ArrowRight size={19} /></div>; }
-
-function AuthModal({ mode, onClose, onError }: { mode: AuthMode; onClose: () => void; onError: (message: string) => void }) {
+function AuthModal({
+  mode,
+  onClose,
+  onError,
+}: {
+  mode: AuthMode;
+  onClose: () => void;
+  onError: (message: string) => void;
+}) {
   const [forgot, setForgot] = useState(false);
   if (forgot) {
-    return <div className="modal-backdrop" onMouseDown={onClose}><div className="login-modal" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose}><X size={18} /></button><ForgotPasswordPanel onClose={() => setForgot(false)} onError={onError} /></div></div>;
+    return (
+      <div className="modal-backdrop" onMouseDown={onClose}>
+        <div className="login-modal" onMouseDown={(event) => event.stopPropagation()}>
+          <button className="modal-close" onClick={onClose}>
+            <X size={18} />
+          </button>
+          <ForgotPasswordPanel onClose={() => setForgot(false)} onError={onError} />
+        </div>
+      </div>
+    );
   }
-  return <AuthGateway mode={mode} onClose={onClose} onError={onError} onForgot={() => setForgot(true)} />;
+  return (
+    <AuthGateway mode={mode} onClose={onClose} onError={onError} onForgot={() => setForgot(true)} />
+  );
 }
 
+function PublicDashboard({
+  orders,
+  onOrder,
+  onRefund,
+  onSignOut,
+  displayName,
+}: {
+  orders: Order[];
+  onOrder: (order: Order) => Promise<void>;
+  onRefund: (refund: RefundData) => Promise<void>;
+  onSignOut: () => void;
+  displayName: string;
+}) {
+  const [showOrder, setShowOrder] = useState(false);
+  const [refundOrderId, setRefundOrderId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const visibleOrders = orders.filter((order) => matchesOrder(order, query));
+  return (
+    <section className="section-wrap console-page">
+      <div className="console-top">
+        <div>
+          <div className="eyebrow">
+            <span className="eyebrow-line" /> PUBLIC INFLUENCER DASHBOARD
+          </div>
+          <h1>
+            Welcome, <em>{displayName.split(" ")[0]}.</em>
+          </h1>
+          <p>Your sponsorship campaigns and partner network, in one focused view.</p>
+        </div>
+        <div className="console-user">
+          <span className="user-avatar">{displayName.slice(0, 2).toUpperCase()}</span>
+          <div>
+            <strong>{displayName}</strong>
+            <small>
+              Google-verified partner <BadgeCheck size={13} />
+            </small>
+          </div>
+        </div>
+      </div>
+      <div className="console-tabs">
+        <button className="active">
+          <Layers3 size={16} /> BarterKartale Log
+        </button>
+        <button>
+          <Users size={16} /> My Affiliate Net
+        </button>
+      </div>
+      <div className="dashboard-search">
+        <OrderSearch orders={orders} onSearch={setQuery} />
+      </div>
+      <div className="public-dashboard-grid">
+        <BarterLog
+          orders={visibleOrders}
+          hasOrders={orders.length > 0}
+          onOrder={() => setShowOrder(true)}
+          onRefund={(orderId) => setRefundOrderId(orderId)}
+        />
+        <Network />
+      </div>
+      <div className="whatsapp-cta">
+        <a
+          className="whatsapp-link"
+          href="https://chat.whatsapp.com/HEaCIH60fQ9GrgbxWYWizh"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Join WhatsApp Group <ArrowRight size={16} />
+        </a>
+      </div>
+      <div className="dashboard-actions">
+        <button className="sign-out-button" onClick={onSignOut}>
+          <LogOut size={15} /> Sign out of dashboard
+        </button>
+      </div>
+      {showOrder && (
+        <OrderModal
+          onClose={() => setShowOrder(false)}
+          onSubmit={async (order) => {
+            await onOrder(order);
+            setShowOrder(false);
+          }}
+        />
+      )}
+      {refundOrderId !== null && (
+        <RefundModal
+          orders={orders}
+          initialOrderId={refundOrderId}
+          onClose={() => setRefundOrderId(null)}
+          onSubmit={async (refund) => {
+            await onRefund(refund);
+            setRefundOrderId(null);
+          }}
+        />
+      )}
+    </section>
+  );
+}
 
-function PublicDashboard({ orders, onOrder, onRefund, onSignOut, displayName }: { orders: Order[]; onOrder: (order: Order) => Promise<void>; onRefund: (refund: RefundData) => Promise<void>; onSignOut: () => void; displayName: string }) { const [showOrder, setShowOrder] = useState(false); const [refundOrderId, setRefundOrderId] = useState<string | null>(null); const [query, setQuery] = useState(''); const visibleOrders = orders.filter((order) => matchesOrder(order, query)); return <section className="section-wrap console-page"><div className="console-top"><div><div className="eyebrow"><span className="eyebrow-line" /> PUBLIC INFLUENCER DASHBOARD</div><h1>Welcome, <em>{displayName.split(' ')[0]}.</em></h1><p>Your sponsorship campaigns and partner network, in one focused view.</p></div><div className="console-user"><span className="user-avatar">{displayName.slice(0, 2).toUpperCase()}</span><div><strong>{displayName}</strong><small>Google-verified partner <BadgeCheck size={13} /></small></div></div></div><div className="console-tabs"><button className="active"><Layers3 size={16} /> BarterKartale Log</button><button><Users size={16} /> My Affiliate Net</button></div><div className="dashboard-search"><OrderSearch orders={orders} onSearch={setQuery} /></div><div className="public-dashboard-grid"><BarterLog orders={visibleOrders} hasOrders={orders.length > 0} onOrder={() => setShowOrder(true)} onRefund={(orderId) => setRefundOrderId(orderId)} /><Network /></div><div className="whatsapp-cta"><a className="whatsapp-link" href="https://chat.whatsapp.com/HEaCIH60fQ9GrgbxWYWizh" target="_blank" rel="noopener noreferrer">Join WhatsApp Group <ArrowRight size={16} /></a></div><div className="dashboard-actions"><button className="sign-out-button" onClick={onSignOut}><LogOut size={15} /> Sign out of dashboard</button></div>{showOrder && <OrderModal onClose={() => setShowOrder(false)} onSubmit={async (order) => { await onOrder(order); setShowOrder(false); }} />}{refundOrderId !== null && <RefundModal orders={orders} initialOrderId={refundOrderId} onClose={() => setRefundOrderId(null)} onSubmit={async (refund) => { await onRefund(refund); setRefundOrderId(null); }} />}</section>; }
+function PartnerConsole({
+  orders,
+  onOrder,
+  onRefund,
+  onSignOut,
+  role,
+}: {
+  orders: Order[];
+  onOrder: (order: Order) => Promise<void>;
+  onRefund: (refund: RefundData) => Promise<void>;
+  onSignOut: () => void;
+  role: PartnerRole;
+}) {
+  const [tab, setTab] = useState<"ret" | "network" | "control">("ret");
+  const [showOrder, setShowOrder] = useState(false);
+  const [showRefund, setShowRefund] = useState(false);
+  const isManager = role === "Ground_Manager";
+  return (
+    <section className="section-wrap console-page">
+      <div className="console-top">
+        <div>
+          <div className="eyebrow">
+            <span className="eyebrow-line" /> STEALTH OPERATIONS PORTAL
+          </div>
+          <h1>
+            Ret-Earn, <em>in control.</em>
+          </h1>
+          <p>Private workspace for approved beta-testing operations and task verification.</p>
+        </div>
+        <div className="console-user">
+          <span className="user-avatar">OP</span>
+          <div>
+            <strong>{role.replace("_", " ")}</strong>
+            <small>
+              Assigned operations role <BadgeCheck size={13} />
+            </small>
+          </div>
+          <ChevronDown size={16} />
+        </div>
+      </div>
+      <div className="metric-grid">
+        <Metric icon={<IndianRupee />} label="This month" value="₹4,860" change="+18.4%" />
+        <Metric icon={<PackageCheck />} label="Completed tasks" value="12" change="+3 this week" />
+        <Metric icon={<Clock3 />} label="In review" value="02" change="Usually under 24h" />
+        <Metric icon={<Users />} label="Active network" value="18" change="₹900 earned" />
+      </div>
+      <div className="console-tabs">
+        <button className={tab === "ret" ? "active" : ""} onClick={() => setTab("ret")}>
+          <RotateCcw size={16} /> Ret-Earn Live Feed
+        </button>
+        <button className={tab === "network" ? "active" : ""} onClick={() => setTab("network")}>
+          <Users size={16} /> Verification Network
+        </button>
+        {isManager && (
+          <button className={tab === "control" ? "active" : ""} onClick={() => setTab("control")}>
+            <ShieldCheck size={16} /> Master Control Center
+          </button>
+        )}
+      </div>
+      {tab === "ret" && <RetEarnFeed onRefund={() => setShowRefund(true)} />}{" "}
+      {tab === "network" && <Network />}
+      {tab === "control" && isManager && <ManagerCenter />}
+      <div className="dashboard-actions">
+        <button className="sign-out-button" onClick={onSignOut}>
+          <LogOut size={15} /> Exit stealth console
+        </button>
+      </div>
+      {showOrder && (
+        <OrderModal
+          onClose={() => setShowOrder(false)}
+          onSubmit={async (order) => {
+            await onOrder(order);
+            setShowOrder(false);
+          }}
+        />
+      )}{" "}
+      {showRefund && (
+        <RefundModal
+          orders={orders}
+          initialOrderId={orders[0]?.orderId ?? null}
+          onClose={() => setShowRefund(false)}
+          onSubmit={async (refund) => {
+            await onRefund(refund);
+            setShowRefund(false);
+          }}
+        />
+      )}
+    </section>
+  );
+}
 
-function PartnerConsole({ orders, onOrder, onRefund, onSignOut, role }: { orders: Order[]; onOrder: (order: Order) => Promise<void>; onRefund: (refund: RefundData) => Promise<void>; onSignOut: () => void; role: PartnerRole }) { const [tab, setTab] = useState<'ret' | 'network' | 'control'>('ret'); const [showOrder, setShowOrder] = useState(false); const [showRefund, setShowRefund] = useState(false); const isManager = role === 'Ground_Manager'; return <section className="section-wrap console-page"><div className="console-top"><div><div className="eyebrow"><span className="eyebrow-line" /> STEALTH OPERATIONS PORTAL</div><h1>Ret-Earn, <em>in control.</em></h1><p>Private workspace for approved beta-testing operations and task verification.</p></div><div className="console-user"><span className="user-avatar">OP</span><div><strong>{role.replace('_', ' ')}</strong><small>Assigned operations role <BadgeCheck size={13} /></small></div><ChevronDown size={16} /></div></div><div className="metric-grid"><Metric icon={<IndianRupee />} label="This month" value="₹4,860" change="+18.4%" /><Metric icon={<PackageCheck />} label="Completed tasks" value="12" change="+3 this week" /><Metric icon={<Clock3 />} label="In review" value="02" change="Usually under 24h" /><Metric icon={<Users />} label="Active network" value="18" change="₹900 earned" /></div><div className="console-tabs"><button className={tab === 'ret' ? 'active' : ''} onClick={() => setTab('ret')}><RotateCcw size={16} /> Ret-Earn Live Feed</button><button className={tab === 'network' ? 'active' : ''} onClick={() => setTab('network')}><Users size={16} /> Verification Network</button>{isManager && <button className={tab === 'control' ? 'active' : ''} onClick={() => setTab('control')}><ShieldCheck size={16} /> Master Control Center</button>}</div>{tab === 'ret' && <RetEarnFeed onRefund={() => setShowRefund(true)} />} {tab === 'network' && <Network />}{tab === 'control' && isManager && <ManagerCenter />}<div className="dashboard-actions"><button className="sign-out-button" onClick={onSignOut}><LogOut size={15} /> Exit stealth console</button></div>{showOrder && <OrderModal onClose={() => setShowOrder(false)} onSubmit={async (order) => { await onOrder(order); setShowOrder(false); }} />} {showRefund && <RefundModal orders={orders} initialOrderId={orders[0]?.orderId ?? null} onClose={() => setShowRefund(false)} onSubmit={async (refund) => { await onRefund(refund); setShowRefund(false); }} />}</section>; }
+function ManagerCenter() {
+  return (
+    <div className="manager-center">
+      <div className="manager-grid">
+        <div className="manager-card manager-profit">
+          <div className="section-kicker">GROUND MANAGER · EKANSH</div>
+          <h2>
+            30% net profit
+            <br />
+            <em>dividends.</em>
+          </h2>
+          <div className="profit-value">
+            ₹28,640 <span>this cycle</span>
+          </div>
+          <div className="profit-bars">
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
+          <div className="manager-card-foot">
+            <span>+12.8% from last cycle</span>
+            <span>7 active weeks</span>
+          </div>
+        </div>
+        <div className="manager-card">
+          <div className="section-kicker">TASK VERIFICATION</div>
+          <h3>Operational switches</h3>
+          <div className="switch-row">
+            <span>Media review queue</span>
+            <b className="switch on" />
+          </div>
+          <div className="switch-row">
+            <span>Assistant Coordinator audit</span>
+            <b className="switch on" />
+          </div>
+          <div className="switch-row">
+            <span>New task approvals</span>
+            <b className="switch" />
+          </div>
+        </div>
+      </div>
+      <div className="manager-list">
+        <div className="panel-heading">
+          <div>
+            <span className="section-kicker">SUB-USER TRACKING</span>
+            <h2>Active operations list.</h2>
+          </div>
+          <span className="live-badge">
+            <i /> 18 ACTIVE
+          </span>
+        </div>
+        <div className="manager-table">
+          <div className="table-head">
+            <span>PARTNER</span>
+            <span>ROLE</span>
+            <span>MEDIA STATUS</span>
+            <span>LAST ACTIVE</span>
+          </div>
+          {[
+            ["Neha S.", "Reviewer", "Verified", "2m ago"],
+            ["Rohan M.", "Assistant Coordinator", "In review", "8m ago"],
+            ["Priya K.", "Reviewer", "Awaiting proof", "21m ago"],
+            ["Arjun T.", "Reviewer", "Verified", "34m ago"],
+          ].map(([name, role, status, active]) => (
+            <div className="table-row" key={name}>
+              <strong>{name}</strong>
+              <span>{role}</span>
+              <span className={status === "Verified" ? "table-status verified" : "table-status"}>
+                <i /> {status}
+              </span>
+              <span>{active}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-function ManagerCenter() { return <div className="manager-center"><div className="manager-grid"><div className="manager-card manager-profit"><div className="section-kicker">GROUND MANAGER · EKANSH</div><h2>30% net profit<br /><em>dividends.</em></h2><div className="profit-value">₹28,640 <span>this cycle</span></div><div className="profit-bars"><i /><i /><i /><i /><i /><i /><i /></div><div className="manager-card-foot"><span>+12.8% from last cycle</span><span>7 active weeks</span></div></div><div className="manager-card"><div className="section-kicker">TASK VERIFICATION</div><h3>Operational switches</h3><div className="switch-row"><span>Media review queue</span><b className="switch on" /></div><div className="switch-row"><span>Assistant Coordinator audit</span><b className="switch on" /></div><div className="switch-row"><span>New task approvals</span><b className="switch" /></div></div></div><div className="manager-list"><div className="panel-heading"><div><span className="section-kicker">SUB-USER TRACKING</span><h2>Active operations list.</h2></div><span className="live-badge"><i /> 18 ACTIVE</span></div><div className="manager-table"><div className="table-head"><span>PARTNER</span><span>ROLE</span><span>MEDIA STATUS</span><span>LAST ACTIVE</span></div>{[['Neha S.', 'Reviewer', 'Verified', '2m ago'], ['Rohan M.', 'Assistant Coordinator', 'In review', '8m ago'], ['Priya K.', 'Reviewer', 'Awaiting proof', '21m ago'], ['Arjun T.', 'Reviewer', 'Verified', '34m ago']].map(([name, role, status, active]) => <div className="table-row" key={name}><strong>{name}</strong><span>{role}</span><span className={status === 'Verified' ? 'table-status verified' : 'table-status'}><i /> {status}</span><span>{active}</span></div>)}</div></div></div>; }
+function Metric({
+  icon,
+  label,
+  value,
+  change,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  change: string;
+}) {
+  return (
+    <div className="metric-card">
+      <div className="metric-icon">{icon}</div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{change}</small>
+    </div>
+  );
+}
+function RetEarnFeed({ onRefund }: { onRefund: () => void }) {
+  return (
+    <div className="feed-layout">
+      <div className="feed-card">
+        <div className="panel-heading">
+          <div>
+            <span className="section-kicker">AVAILABLE NOW</span>
+            <h2>Return tasks for you.</h2>
+          </div>
+          <span className="live-badge">
+            <i /> LIVE
+          </span>
+        </div>
+        <p className="panel-subtitle">
+          Complete an approved beta-testing brief, share authentic product feedback, and submit your
+          verification when the milestone is complete.
+        </p>
+        <div className="task-list">
+          <div className="empty-state">
+            <Sparkles size={26} />
+            <strong>No tasks yet</strong>
+            <p>Your assigned campaign tasks will show up here.</p>
+          </div>
+        </div>
+        <div className="rotation-note">
+          <CircleHelp size={18} />
+          <div>
+            <strong>Keep your workflow balanced</strong>
+            <p>
+              Follow each campaign's platform and delivery instructions. One clear task at a time
+              keeps your account healthy.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="verification-card">
+        <div className="section-kicker">NEXT STEP</div>
+        <div className="verify-icon">
+          <FileCheck2 size={22} />
+        </div>
+        <h3>Have you completed a task?</h3>
+        <p>Submit your campaign details and authentic proof for a quick human review.</p>
+        <button className="primary-button" onClick={onRefund}>
+          Fill Refund Form <ArrowRight size={15} />
+        </button>
+        <small>
+          <ShieldCheck size={13} /> Reviews are handled responsibly
+        </small>
+      </div>
+    </div>
+  );
+}
+function BarterLog({
+  orders,
+  hasOrders,
+  onOrder,
+  onRefund,
+}: {
+  orders: Order[];
+  hasOrders: boolean;
+  onOrder: () => void;
+  onRefund: (orderId: string) => void;
+}) {
+  return (
+    <div className="barter-log">
+      <div className="panel-heading">
+        <div>
+          <span className="section-kicker">YOUR PRODUCT LOG</span>
+          <h2>Keep, share, or resell.</h2>
+        </div>
+        <button className="primary-button" onClick={onOrder}>
+          Fill Order Form <ArrowRight size={15} />
+        </button>
+      </div>
+      <p className="panel-subtitle">
+        A simple record of your active product collaborations and personal-use campaigns.
+      </p>
+      {!hasOrders ? (
+        <div className="empty-state">
+          <PackageCheck size={30} />
+          <strong>Your product log is empty</strong>
+          <p>Fill your first order form to see it here.</p>
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="empty-state">
+          <Search size={30} />
+          <strong>No matching orders</strong>
+          <p>Try another order ID, name, platform, or deal.</p>
+        </div>
+      ) : (
+        <div className="order-table">
+          {orders.map((order) => (
+            <div className="order-row" key={order.orderId}>
+              <div>
+                <strong>{order.orderId}</strong>
+                <span>
+                  {order.platform} · {order.deal}
+                </span>
+              </div>
+              <div className="order-actions">
+                <span className="status-chip">
+                  <Check size={13} /> {order.status}
+                </span>
+                <button className="link-chip" onClick={() => onRefund(order.orderId)}>
+                  Fill Refund Form
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+function Network() {
+  return (
+    <div className="network-card">
+      <div className="panel-heading">
+        <div>
+          <span className="section-kicker">REFERRALS & REWARDS</span>
+          <h2>Grow your circle, responsibly.</h2>
+        </div>
+        <div className="milestone">
+          <small>MEGA MILESTONE</small>
+          <strong>6 / 10 friends</strong>
+          <div>
+            <i />
+          </div>
+          <span>₹300 unlocked</span>
+        </div>
+      </div>
+      <div className="network-stats">
+        <div>
+          <span>Referral bonus</span>
+          <strong>
+            ₹50 <small>per active friend</small>
+          </strong>
+        </div>
+        <div>
+          <span>Priority pass</span>
+          <strong>
+            10 min <small>early access</small>
+          </strong>
+        </div>
+        <div>
+          <span>Network status</span>
+          <strong className="green-text">Healthy</strong>
+        </div>
+      </div>
+      <div className="referral-table">
+        <div className="table-head">
+          <span>FRIEND</span>
+          <span>GROUP</span>
+          <span>STATUS</span>
+          <span>BONUS</span>
+        </div>
+        {[
+          ["Neha S.", "Ret-Earn", "Verified", "₹50"],
+          ["Rohan M.", "BarterKartale", "Verified", "₹50"],
+          ["Priya K.", "Ret-Earn", "In progress", "—"],
+          ["Arjun T.", "BarterKartale", "Verified", "₹50"],
+        ].map(([name, group, status, bonus]) => (
+          <div className="table-row" key={name}>
+            <strong>{name}</strong>
+            <span>{group}</span>
+            <span className={status === "Verified" ? "table-status verified" : "table-status"}>
+              <i /> {status}
+            </span>
+            <b>{bonus}</b>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-function Metric({ icon, label, value, change }: { icon: React.ReactNode; label: string; value: string; change: string }) { return <div className="metric-card"><div className="metric-icon">{icon}</div><span>{label}</span><strong>{value}</strong><small>{change}</small></div>; }
-function RetEarnFeed({ onRefund }: { onRefund: () => void }) { return <div className="feed-layout"><div className="feed-card"><div className="panel-heading"><div><span className="section-kicker">AVAILABLE NOW</span><h2>Return tasks for you.</h2></div><span className="live-badge"><i /> LIVE</span></div><p className="panel-subtitle">Complete an approved beta-testing brief, share authentic product feedback, and submit your verification when the milestone is complete.</p><div className="task-list"><div className="empty-state"><Sparkles size={26} /><strong>No tasks yet</strong><p>Your assigned campaign tasks will show up here.</p></div></div><div className="rotation-note"><CircleHelp size={18} /><div><strong>Keep your workflow balanced</strong><p>Follow each campaign's platform and delivery instructions. One clear task at a time keeps your account healthy.</p></div></div></div><div className="verification-card"><div className="section-kicker">NEXT STEP</div><div className="verify-icon"><FileCheck2 size={22} /></div><h3>Have you completed a task?</h3><p>Submit your campaign details and authentic proof for a quick human review.</p><button className="primary-button" onClick={onRefund}>Fill Refund Form <ArrowRight size={15} /></button><small><ShieldCheck size={13} /> Reviews are handled responsibly</small></div></div>; }
-function BarterLog({ orders, hasOrders, onOrder, onRefund }: { orders: Order[]; hasOrders: boolean; onOrder: () => void; onRefund: (orderId: string) => void }) { return <div className="barter-log"><div className="panel-heading"><div><span className="section-kicker">YOUR PRODUCT LOG</span><h2>Keep, share, or resell.</h2></div><button className="primary-button" onClick={onOrder}>Fill Order Form <ArrowRight size={15} /></button></div><p className="panel-subtitle">A simple record of your active product collaborations and personal-use campaigns.</p>{!hasOrders ? <div className="empty-state"><PackageCheck size={30} /><strong>Your product log is empty</strong><p>Fill your first order form to see it here.</p></div> : orders.length === 0 ? <div className="empty-state"><Search size={30} /><strong>No matching orders</strong><p>Try another order ID, name, platform, or deal.</p></div> : <div className="order-table">{orders.map((order) => <div className="order-row" key={order.orderId}><div><strong>{order.orderId}</strong><span>{order.platform} · {order.deal}</span></div><div className="order-actions"><span className="status-chip"><Check size={13} /> {order.status}</span><button className="link-chip" onClick={() => onRefund(order.orderId)}>Fill Refund Form</button></div></div>)}</div>}</div>; }
-function Network() { return <div className="network-card"><div className="panel-heading"><div><span className="section-kicker">REFERRALS & REWARDS</span><h2>Grow your circle, responsibly.</h2></div><div className="milestone"><small>MEGA MILESTONE</small><strong>6 / 10 friends</strong><div><i /></div><span>₹300 unlocked</span></div></div><div className="network-stats"><div><span>Referral bonus</span><strong>₹50 <small>per active friend</small></strong></div><div><span>Priority pass</span><strong>10 min <small>early access</small></strong></div><div><span>Network status</span><strong className="green-text">Healthy</strong></div></div><div className="referral-table"><div className="table-head"><span>FRIEND</span><span>GROUP</span><span>STATUS</span><span>BONUS</span></div>{[['Neha S.', 'Ret-Earn', 'Verified', '₹50'], ['Rohan M.', 'BarterKartale', 'Verified', '₹50'], ['Priya K.', 'Ret-Earn', 'In progress', '—'], ['Arjun T.', 'BarterKartale', 'Verified', '₹50']].map(([name, group, status, bonus]) => <div className="table-row" key={name}><strong>{name}</strong><span>{group}</span><span className={status === 'Verified' ? 'table-status verified' : 'table-status'}><i /> {status}</span><b>{bonus}</b></div>)}</div></div>; }
+function OrderModal({
+  onClose,
+  onSubmit,
+}: {
+  onClose: () => void;
+  onSubmit: (order: Order) => void;
+}) {
+  const [form, setForm] = useState<Order>({
+    name: "",
+    address: "",
+    platform: "Amazon",
+    deal: "Full Sponsorship",
+    orderId: "",
+    status: "",
+  });
+  const update = (key: keyof Order, value: string) =>
+    setForm((current) => ({ ...current, [key]: value }));
+  return (
+    <div className="modal-backdrop" onMouseDown={onClose}>
+      <div className="form-modal" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>
+          <X size={18} />
+        </button>
+        <div className="section-kicker">ORDER FORM</div>
+        <h2>
+          Fill Order <em>form.</em>
+        </h2>
+        <p>Share the basics so we can match your order to the right campaign brief.</p>
+        <div className="form-grid">
+          <label>
+            Your name
+            <input
+              value={form.name}
+              onChange={(e) => update("name", e.target.value)}
+              required
+              placeholder="Full name"
+            />
+          </label>
+          <label>
+            Order ID
+            <input
+              value={form.orderId}
+              onChange={(e) => update("orderId", e.target.value)}
+              required
+              placeholder="e.g. 405-1234567"
+            />
+          </label>
+          <label className="wide">
+            Campus or delivery address
+            <input
+              value={form.address}
+              onChange={(e) => update("address", e.target.value)}
+              required
+              placeholder="Where should the product go?"
+            />
+          </label>
+          <label>
+            Platform
+            <select value={form.platform} onChange={(e) => update("platform", e.target.value)}>
+              <option>Amazon</option>
+              <option>Flipkart</option>
+              <option>Myntra</option>
+              <option>Meesho</option>
+            </select>
+          </label>
+          <label>
+            Deal type
+            <select value={form.deal} onChange={(e) => update("deal", e.target.value)}>
+              <option>Full Sponsorship</option>
+              <option>Micro-Fee Campaign</option>
+            </select>
+          </label>
+        </div>
+        <button className="primary-button full-button" onClick={() => onSubmit(form)}>
+          Submit order form <ArrowRight size={16} />
+        </button>
+        <small className="form-footnote">
+          <ShieldCheck size={13} /> Your details stay within this partner workspace.
+        </small>
+      </div>
+    </div>
+  );
+}
+const PLATFORMS = ["Amazon", "Flipkart", "Myntra", "Meesho"];
+const DEALS = ["Full Sponsorship", "Micro-Fee Campaign"];
 
-function OrderModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (order: Order) => void }) { const [form, setForm] = useState<Order>({ name: '', address: '', platform: 'Amazon', deal: 'Full Sponsorship', orderId: '', status: '' }); const update = (key: keyof Order, value: string) => setForm((current) => ({ ...current, [key]: value })); return <div className="modal-backdrop" onMouseDown={onClose}><div className="form-modal" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose}><X size={18} /></button><div className="section-kicker">ORDER FORM</div><h2>Fill Order <em>form.</em></h2><p>Share the basics so we can match your order to the right campaign brief.</p><div className="form-grid"><label>Your name<input value={form.name} onChange={(e) => update('name', e.target.value)} required placeholder="Full name" /></label><label>Order ID<input value={form.orderId} onChange={(e) => update('orderId', e.target.value)} required placeholder="e.g. 405-1234567" /></label><label className="wide">Campus or delivery address<input value={form.address} onChange={(e) => update('address', e.target.value)} required placeholder="Where should the product go?" /></label><label>Platform<select value={form.platform} onChange={(e) => update('platform', e.target.value)}><option>Amazon</option><option>Flipkart</option><option>Myntra</option><option>Meesho</option></select></label><label>Deal type<select value={form.deal} onChange={(e) => update('deal', e.target.value)}><option>Full Sponsorship</option><option>Micro-Fee Campaign</option></select></label></div><button className="primary-button full-button" onClick={() => onSubmit(form)}>Submit order form <ArrowRight size={16} /></button><small className="form-footnote"><ShieldCheck size={13} /> Your details stay within this partner workspace.</small></div></div>; }
-const PLATFORMS = ['Amazon', 'Flipkart', 'Myntra', 'Meesho'];
-const DEALS = ['Full Sponsorship', 'Micro-Fee Campaign'];
+type RefundField = "name" | "platform" | "deal";
+type RefundData = {
+  enrollmentId: string | null;
+  name: string;
+  platform: string;
+  campaignType: string;
+  upiId: string;
+  proofFilename: string | null;
+};
 
-type RefundField = 'name' | 'platform' | 'deal';
-type RefundData = { enrollmentId: string | null; name: string; platform: string; campaignType: string; upiId: string; proofFilename: string | null };
-
-function RefundModal({ orders, initialOrderId, onClose, onSubmit }: { orders: Order[]; initialOrderId: string | null; onClose: () => void; onSubmit: (refund: RefundData) => void }) {
-  const [selectedId, setSelectedId] = useState(initialOrderId ?? orders[0]?.orderId ?? '');
+function RefundModal({
+  orders,
+  initialOrderId,
+  onClose,
+  onSubmit,
+}: {
+  orders: Order[];
+  initialOrderId: string | null;
+  onClose: () => void;
+  onSubmit: (refund: RefundData) => void;
+}) {
+  const [selectedId, setSelectedId] = useState(initialOrderId ?? orders[0]?.orderId ?? "");
   const [overrides, setOverrides] = useState<Partial<Record<RefundField, string>>>({});
-  const [upi, setUpi] = useState('');
-  const [file, setFile] = useState('');
+  const [upi, setUpi] = useState("");
+  const [file, setFile] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const selected = orders.find((order) => order.orderId === selectedId);
-  const valueOf = (field: RefundField) => overrides[field] ?? selected?.[field] ?? '';
-  const override = (field: RefundField, value: string) => setOverrides((current) => ({ ...current, [field]: value }));
-  const chooseOrder = (orderId: string) => { setSelectedId(orderId); setOverrides({}); };
-  const onFile = (event: ChangeEvent<HTMLInputElement>) => setFile(event.target.files?.[0]?.name || '');
+  const valueOf = (field: RefundField) => overrides[field] ?? selected?.[field] ?? "";
+  const override = (field: RefundField, value: string) =>
+    setOverrides((current) => ({ ...current, [field]: value }));
+  const chooseOrder = (orderId: string) => {
+    setSelectedId(orderId);
+    setOverrides({});
+  };
+  const onFile = (event: ChangeEvent<HTMLInputElement>) =>
+    setFile(event.target.files?.[0]?.name || "");
   const handleSubmit = () => {
     setSubmitting(true);
     onSubmit({
       enrollmentId: selected?.orderId || null,
-      name: valueOf('name'),
-      platform: valueOf('platform'),
-      campaignType: valueOf('deal'),
+      name: valueOf("name"),
+      platform: valueOf("platform"),
+      campaignType: valueOf("deal"),
       upiId: upi.trim(),
       proofFilename: file || null,
     });
   };
-  return <div className="modal-backdrop" onMouseDown={onClose}><div className="form-modal" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose}><X size={18} /></button><div className="section-kicker">REFUND FORM</div><h2>Fill Refund <em>form.</em></h2><p>Details from your matching order fill in automatically. Edit any field before you submit.</p>{orders.length === 0 ? <div className="empty-state"><PackageCheck size={30} /><strong>No order form on file</strong><p>Fill an order form first. The refund form uses the details from that order.</p></div> : <><div className="form-grid"><label className="wide">Order ID<select value={selectedId} onChange={(event) => chooseOrder(event.target.value)}>{orders.map((order) => <option key={order.orderId} value={order.orderId}>{order.orderId} · {order.platform}</option>)}</select></label><label>Your name<input value={valueOf('name')} onChange={(event) => override('name', event.target.value)} placeholder="Full name" /></label><label>Platform<select value={valueOf('platform')} onChange={(event) => override('platform', event.target.value)}>{PLATFORMS.map((platform) => <option key={platform}>{platform}</option>)}</select></label><label>Deal type<select value={valueOf('deal')} onChange={(event) => override('deal', event.target.value)}>{DEALS.map((deal) => <option key={deal}>{deal}</option>)}</select></label><label>UPI ID for payout<input value={upi} onChange={(event) => setUpi(event.target.value)} placeholder="name@upi" /></label></div><label>Supporting proof<div className="upload-box"><Upload size={20} /><strong>{file || 'Drop your file here'}</strong><span>PNG, JPG or MP4 · max 20MB</span><input type="file" accept="image/png,image/jpeg,video/mp4" onChange={onFile} /></div></label><button className="primary-button full-button" disabled={!upi.trim() || submitting} onClick={handleSubmit}>{submitting ? 'Submitting…' : 'Submit refund form'} <ArrowRight size={16} /></button></>}<small className="form-footnote"><ShieldCheck size={13} /> Only genuine experiences are eligible for payout.</small></div></div>; }
-
-
+  return (
+    <div className="modal-backdrop" onMouseDown={onClose}>
+      <div className="form-modal" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>
+          <X size={18} />
+        </button>
+        <div className="section-kicker">REFUND FORM</div>
+        <h2>
+          Fill Refund <em>form.</em>
+        </h2>
+        <p>
+          Details from your matching order fill in automatically. Edit any field before you submit.
+        </p>
+        {orders.length === 0 ? (
+          <div className="empty-state">
+            <PackageCheck size={30} />
+            <strong>No order form on file</strong>
+            <p>Fill an order form first. The refund form uses the details from that order.</p>
+          </div>
+        ) : (
+          <>
+            <div className="form-grid">
+              <label className="wide">
+                Order ID
+                <select value={selectedId} onChange={(event) => chooseOrder(event.target.value)}>
+                  {orders.map((order) => (
+                    <option key={order.orderId} value={order.orderId}>
+                      {order.orderId} · {order.platform}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Your name
+                <input
+                  value={valueOf("name")}
+                  onChange={(event) => override("name", event.target.value)}
+                  placeholder="Full name"
+                />
+              </label>
+              <label>
+                Platform
+                <select
+                  value={valueOf("platform")}
+                  onChange={(event) => override("platform", event.target.value)}
+                >
+                  {PLATFORMS.map((platform) => (
+                    <option key={platform}>{platform}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Deal type
+                <select
+                  value={valueOf("deal")}
+                  onChange={(event) => override("deal", event.target.value)}
+                >
+                  {DEALS.map((deal) => (
+                    <option key={deal}>{deal}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                UPI ID for payout
+                <input
+                  value={upi}
+                  onChange={(event) => setUpi(event.target.value)}
+                  placeholder="name@upi"
+                />
+              </label>
+            </div>
+            <label>
+              Supporting proof
+              <div className="upload-box">
+                <Upload size={20} />
+                <strong>{file || "Drop your file here"}</strong>
+                <span>PNG, JPG or MP4 · max 20MB</span>
+                <input type="file" accept="image/png,image/jpeg,video/mp4" onChange={onFile} />
+              </div>
+            </label>
+            <button
+              className="primary-button full-button"
+              disabled={!upi.trim() || submitting}
+              onClick={handleSubmit}
+            >
+              {submitting ? "Submitting…" : "Submit refund form"} <ArrowRight size={16} />
+            </button>
+          </>
+        )}
+        <small className="form-footnote">
+          <ShieldCheck size={13} /> Only genuine experiences are eligible for payout.
+        </small>
+      </div>
+    </div>
+  );
+}

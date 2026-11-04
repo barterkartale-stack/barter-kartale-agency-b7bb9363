@@ -1,6 +1,16 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { ArrowRight, BadgeCheck, Clock3, Copy, KeyRound, LockKeyhole, Share2, ShieldCheck, X } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Clock3,
+  Copy,
+  KeyRound,
+  LockKeyhole,
+  Share2,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { captureSignUpIp, generateDeviceFingerprint } from "@/components/app/AuthPanels";
@@ -23,7 +33,10 @@ export function rememberAccount(acc: SavedAccount): void {
   window.localStorage.setItem(SAVED_KEY, JSON.stringify([acc, ...list].slice(0, 5)));
 }
 function forgetAccount(email: string): void {
-  window.localStorage.setItem(SAVED_KEY, JSON.stringify(readSavedAccounts().filter((a) => a.email !== email)));
+  window.localStorage.setItem(
+    SAVED_KEY,
+    JSON.stringify(readSavedAccounts().filter((a) => a.email !== email)),
+  );
 }
 
 /* ---------- Keep me signed in ---------- */
@@ -36,7 +49,10 @@ function setKeepSignedIn(keep: boolean): void {
 }
 /** Call once on app start: signs out sessions that were not marked "keep me signed in" once the browser was closed. */
 export async function enforceKeepSignedIn(): Promise<void> {
-  if (window.localStorage.getItem(EPHEMERAL_KEY) === "1" && !window.sessionStorage.getItem(ALIVE_KEY)) {
+  if (
+    window.localStorage.getItem(EPHEMERAL_KEY) === "1" &&
+    !window.sessionStorage.getItem(ALIVE_KEY)
+  ) {
     window.localStorage.removeItem(EPHEMERAL_KEY);
     await supabase.auth.signOut();
   }
@@ -74,8 +90,19 @@ export async function completeAccountSetup(input: {
   referral?: string | undefined;
   invite?: string | undefined;
 }) {
-  const [ip, fp] = await Promise.all([captureSignUpIp(), Promise.resolve(generateDeviceFingerprint())]);
-  const args: { p_display_name: string; p_mobile_number: string; p_device_fingerprint: string; p_partner: boolean; p_sign_up_ip?: string; p_referral_code?: string; p_invite_code?: string } = {
+  const [ip, fp] = await Promise.all([
+    captureSignUpIp(),
+    Promise.resolve(generateDeviceFingerprint()),
+  ]);
+  const args: {
+    p_display_name: string;
+    p_mobile_number: string;
+    p_device_fingerprint: string;
+    p_partner: boolean;
+    p_sign_up_ip?: string;
+    p_referral_code?: string;
+    p_invite_code?: string;
+  } = {
     p_display_name: input.name,
     p_mobile_number: input.mobile,
     p_device_fingerprint: fp,
@@ -101,8 +128,13 @@ function GoogleButton({ mode, onError }: { mode: AuthMode; onError: (m: string) 
     setLoading(true);
     savePending({ mode, referral: referralFromUrl() || undefined });
     setKeepSignedIn(true);
-    window.sessionStorage.setItem("bk_after_login", mode === "partner" ? "/partner-console" : "/dashboard");
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth/callback` });
+    window.sessionStorage.setItem(
+      "bk_after_login",
+      mode === "partner" ? "/partner-console" : "/dashboard",
+    );
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
     if (result.error) {
       setLoading(false);
       onError("Google sign-in is temporarily unavailable. Please try again.");
@@ -143,10 +175,32 @@ export function AuthGateway({
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="login-modal access-gateway" onMouseDown={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}><X size={18} /></button>
-        <div className="section-kicker">{isPartner ? "PRIVATE PARTNER CONSOLE" : "ACCESS GATEWAY"}</div>
-        <h2>{isPartner ? <>Partner<br /><em>Console.</em></> : <>Welcome to<br /><em>BarterKartale.</em></>}</h2>
-        <p>{isPartner ? "Sign in, or join with the agency invitation code you received from our team." : "Sign in to your dashboard or create a new account."}</p>
+        <button className="modal-close" onClick={onClose}>
+          <X size={18} />
+        </button>
+        <div className="section-kicker">
+          {isPartner ? "PRIVATE PARTNER CONSOLE" : "ACCESS GATEWAY"}
+        </div>
+        <h2>
+          {isPartner ? (
+            <>
+              Partner
+              <br />
+              <em>Console.</em>
+            </>
+          ) : (
+            <>
+              Welcome to
+              <br />
+              <em>BarterKartale.</em>
+            </>
+          )}
+        </h2>
+        <p>
+          {isPartner
+            ? "Sign in, or join with the agency invitation code you received from our team."
+            : "Sign in to your dashboard or create a new account."}
+        </p>
 
         {saved.length > 0 && tab === "signin" && (
           <div className="saved-accounts">
@@ -154,23 +208,57 @@ export function AuthGateway({
             {saved.map((a) => (
               <div className="saved-account" key={a.email}>
                 <button type="button" onClick={() => setPrefill(a.email)}>
-                  <span className="user-avatar">{(a.name || a.email).slice(0, 2).toUpperCase()}</span>
-                  <span><strong>{a.name || a.email.split("@")[0]}</strong><em>{a.email}</em></span>
+                  <span className="user-avatar">
+                    {(a.name || a.email).slice(0, 2).toUpperCase()}
+                  </span>
+                  <span>
+                    <strong>{a.name || a.email.split("@")[0]}</strong>
+                    <em>{a.email}</em>
+                  </span>
                 </button>
-                <button type="button" className="saved-remove" aria-label={`Remove ${a.email}`} onClick={() => { forgetAccount(a.email); setSaved(readSavedAccounts()); }}><X size={14} /></button>
+                <button
+                  type="button"
+                  className="saved-remove"
+                  aria-label={`Remove ${a.email}`}
+                  onClick={() => {
+                    forgetAccount(a.email);
+                    setSaved(readSavedAccounts());
+                  }}
+                >
+                  <X size={14} />
+                </button>
               </div>
             ))}
           </div>
         )}
 
         <GoogleButton mode={mode} onError={onError} />
-        <div className="auth-separator"><span>— Or use your credentials —</span></div>
+        <div className="auth-separator">
+          <span>— Or use your credentials —</span>
+        </div>
         <div className="auth-tabs">
-          <button className={tab === "signin" ? "auth-tab active" : "auth-tab"} onClick={() => setTab("signin")}>Sign In</button>
-          <button className={tab === "signup" ? "auth-tab active" : "auth-tab"} onClick={() => setTab("signup")}>Sign Up</button>
+          <button
+            className={tab === "signin" ? "auth-tab active" : "auth-tab"}
+            onClick={() => setTab("signin")}
+          >
+            Sign In
+          </button>
+          <button
+            className={tab === "signup" ? "auth-tab active" : "auth-tab"}
+            onClick={() => setTab("signup")}
+          >
+            Sign Up
+          </button>
         </div>
         {tab === "signin" ? (
-          <SignInForm key={prefill} initialEmail={prefill} mode={mode} onDone={onClose} onError={onError} onForgot={onForgot} />
+          <SignInForm
+            key={prefill}
+            initialEmail={prefill}
+            mode={mode}
+            onDone={onClose}
+            onError={onError}
+            onForgot={onForgot}
+          />
         ) : (
           <SignUpForm mode={mode} onDone={onClose} onError={onError} />
         )}
@@ -182,12 +270,25 @@ export function AuthGateway({
 function KeepSignedIn({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="keep-signed-in">
-      <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} /> Keep me signed in
+      <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} /> Keep me
+      signed in
     </label>
   );
 }
 
-function SignInForm({ initialEmail, mode, onDone, onError, onForgot }: { initialEmail: string; mode: AuthMode; onDone: () => void; onError: (m: string) => void; onForgot: () => void }) {
+function SignInForm({
+  initialEmail,
+  mode,
+  onDone,
+  onError,
+  onForgot,
+}: {
+  initialEmail: string;
+  mode: AuthMode;
+  onDone: () => void;
+  onError: (m: string) => void;
+  onForgot: () => void;
+}) {
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [keep, setKeep] = useState(true);
@@ -196,7 +297,10 @@ function SignInForm({ initialEmail, mode, onDone, onError, onForgot }: { initial
     e.preventDefault();
     setLoading(true);
     setKeepSignedIn(keep);
-    window.sessionStorage.setItem("bk_after_login", mode === "partner" ? "/partner-console" : "/dashboard");
+    window.sessionStorage.setItem(
+      "bk_after_login",
+      mode === "partner" ? "/partner-console" : "/dashboard",
+    );
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
     if (error) {
@@ -207,16 +311,47 @@ function SignInForm({ initialEmail, mode, onDone, onError, onForgot }: { initial
   };
   return (
     <form className="email-auth-panel" onSubmit={submit}>
-      <label>Email<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@gmail.com" /></label>
-      <label>Password<input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" autoFocus={!!initialEmail} /></label>
+      <label>
+        Email
+        <input
+          required
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@gmail.com"
+        />
+      </label>
+      <label>
+        Password
+        <input
+          required
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Your password"
+          autoFocus={!!initialEmail}
+        />
+      </label>
       <KeepSignedIn value={keep} onChange={setKeep} />
-      <button className="primary-button full-button" disabled={loading}>{loading ? "Signing in…" : "Sign In"} <ArrowRight size={16} /></button>
-      <button type="button" className="text-button forgot-link" onClick={onForgot}><KeyRound size={14} /> Forgot password?</button>
+      <button className="primary-button full-button" disabled={loading}>
+        {loading ? "Signing in…" : "Sign In"} <ArrowRight size={16} />
+      </button>
+      <button type="button" className="text-button forgot-link" onClick={onForgot}>
+        <KeyRound size={14} /> Forgot password?
+      </button>
     </form>
   );
 }
 
-function SignUpForm({ mode, onDone, onError }: { mode: AuthMode; onDone: () => void; onError: (m: string) => void }) {
+function SignUpForm({
+  mode,
+  onDone,
+  onError,
+}: {
+  mode: AuthMode;
+  onDone: () => void;
+  onError: (m: string) => void;
+}) {
   const isPartner = mode === "partner";
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -230,26 +365,44 @@ function SignUpForm({ mode, onDone, onError }: { mode: AuthMode; onDone: () => v
     e.preventDefault();
     setLoading(true);
     setKeepSignedIn(keep);
-    const pending: PendingSignup = { mode, referral: isPartner ? undefined : code.trim() || undefined, invite: isPartner ? code.trim() : undefined };
+    const pending: PendingSignup = {
+      mode,
+      referral: isPartner ? undefined : code.trim() || undefined,
+      invite: isPartner ? code.trim() : undefined,
+    };
     savePending(pending);
     window.sessionStorage.setItem("bk_after_login", isPartner ? "/partner-console" : "/dashboard");
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: { display_name: name, mobile_number: mobile, signup_mode: mode, referral_code: pending.referral, invite_code: pending.invite },
+        emailRedirectTo: window.location.origin,
+        data: {
+          display_name: name,
+          mobile_number: mobile,
+          signup_mode: mode,
+          referral_code: pending.referral,
+          invite_code: pending.invite,
+        },
       },
     });
     if (error || !data.user || (data.user.identities && data.user.identities.length === 0)) {
       setLoading(false);
       const m = error?.message?.toLowerCase() || "registered";
-      onError(m.includes("registered") ? "This email is already registered. Please Sign In." : m.includes("password") ? "Password too weak. Use 8+ characters with letters and numbers." : "Could not create your account. Please try again.");
+      onError(
+        m.includes("registered")
+          ? "This email is already registered. Please Sign In."
+          : m.includes("password")
+            ? "Password too weak. Use 8+ characters with letters and numbers."
+            : "Could not create your account. Please try again.",
+      );
       return;
     }
     if (!data.session) {
       setLoading(false);
-      onError("Account created! Check your email inbox and click the confirmation link to sign in.");
+      onError(
+        "Account created! Check your email inbox and click the confirmation link to sign in.",
+      );
       onDone();
       return;
     }
@@ -266,32 +419,112 @@ function SignUpForm({ mode, onDone, onError }: { mode: AuthMode; onDone: () => v
 
   return (
     <form className="email-auth-panel" onSubmit={submit}>
-      <label>Full Name<input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" /></label>
-      <label>Active WhatsApp / Phone Number<input required inputMode="tel" pattern="[0-9+() -]{10,15}" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit number" /></label>
-      <label>Email Address<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@gmail.com" /></label>
-      <label>Create Password<input required minLength={8} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" /></label>
+      <label>
+        Full Name
+        <input
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Your full name"
+        />
+      </label>
+      <label>
+        Active WhatsApp / Phone Number
+        <input
+          required
+          inputMode="tel"
+          pattern="[0-9+() -]{10,15}"
+          value={mobile}
+          onChange={(e) => setMobile(e.target.value)}
+          placeholder="10-digit number"
+        />
+      </label>
+      <label>
+        Email Address
+        <input
+          required
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@gmail.com"
+        />
+      </label>
+      <label>
+        Create Password
+        <input
+          required
+          minLength={8}
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="At least 8 characters"
+        />
+      </label>
       {isPartner ? (
-        <label>Agency Invitation Code<input required value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Code given by BarterKartale" /></label>
+        <label>
+          Agency Invitation Code
+          <input
+            required
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="Code given by BarterKartale"
+          />
+        </label>
       ) : (
-        <label>Referral Code <span className="optional-tag">(optional)</span><input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g. BK-A1B2C3" /></label>
+        <label>
+          Referral Code <span className="optional-tag">(optional)</span>
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="e.g. BK-A1B2C3"
+          />
+        </label>
       )}
       <KeepSignedIn value={keep} onChange={setKeep} />
-      <button className="primary-button full-button" disabled={loading}>{loading ? "Creating account…" : isPartner ? "Request Partner Access" : "Create Account"} <ArrowRight size={16} /></button>
-      <div className="privacy-disclosure"><ShieldCheck size={14} /><span>For account security, your sign-up IP and a device fingerprint are logged and visible only to administrators.</span></div>
+      <button className="primary-button full-button" disabled={loading}>
+        {loading ? "Creating account…" : isPartner ? "Request Partner Access" : "Create Account"}{" "}
+        <ArrowRight size={16} />
+      </button>
+      <div className="privacy-disclosure">
+        <ShieldCheck size={14} />
+        <span>
+          For account security, your sign-up IP and a device fingerprint are logged and visible only
+          to administrators.
+        </span>
+      </div>
     </form>
   );
 }
 
 /* ---------- Mandatory setup after Google / email confirmation ---------- */
-export function AccountSetupModal({ session, onComplete, onError }: { session: Session; onComplete: () => void; onError: (m: string) => void }) {
-  const meta = (session.user.user_metadata || {}) as { full_name?: string; name?: string; display_name?: string; mobile_number?: string; signup_mode?: AuthMode; referral_code?: string; invite_code?: string };
+export function AccountSetupModal({
+  session,
+  onComplete,
+  onError,
+}: {
+  session: Session;
+  onComplete: () => void;
+  onError: (m: string) => void;
+}) {
+  const meta = (session.user.user_metadata || {}) as {
+    full_name?: string;
+    name?: string;
+    display_name?: string;
+    mobile_number?: string;
+    signup_mode?: AuthMode;
+    referral_code?: string;
+    invite_code?: string;
+  };
   const [pending] = useState(() => readPending());
   const mode: AuthMode = pending?.mode || meta.signup_mode || "creator";
   const isPartner = mode === "partner";
   const [name, setName] = useState(meta.display_name || meta.full_name || meta.name || "");
   const [mobile, setMobile] = useState(meta.mobile_number || "");
   const [password, setPassword] = useState("");
-  const [code, setCode] = useState((isPartner ? pending?.invite || meta.invite_code : pending?.referral || meta.referral_code) || "");
+  const [code, setCode] = useState(
+    (isPartner ? pending?.invite || meta.invite_code : pending?.referral || meta.referral_code) ||
+      "",
+  );
   const isGoogle = session.user.app_metadata?.provider === "google";
   const [loading, setLoading] = useState(false);
 
@@ -306,7 +539,13 @@ export function AccountSetupModal({ session, onComplete, onError }: { session: S
         return;
       }
     }
-    const { error } = await completeAccountSetup({ name, mobile, mode, referral: isPartner ? undefined : code, invite: isPartner ? code : undefined });
+    const { error } = await completeAccountSetup({
+      name,
+      mobile,
+      mode,
+      referral: isPartner ? undefined : code,
+      invite: isPartner ? code : undefined,
+    });
     setLoading(false);
     if (error) {
       onError(friendlyRpcError(error.message));
@@ -320,20 +559,77 @@ export function AccountSetupModal({ session, onComplete, onError }: { session: S
   return (
     <div className="modal-backdrop onboarding-backdrop">
       <div className="auth-panel onboarding-panel">
-        <div className="login-mark"><BadgeCheck size={20} /></div>
-        <div className="section-kicker">{isPartner ? "PARTNER ACCOUNT SETUP" : "COMPLETE YOUR ACCOUNT"}</div>
-        <h2>One quick step<br /><em>before we begin.</em></h2>
-        <p>Signed in as <strong>{session.user.email}</strong>. Please fill these details to continue.</p>
+        <div className="login-mark">
+          <BadgeCheck size={20} />
+        </div>
+        <div className="section-kicker">
+          {isPartner ? "PARTNER ACCOUNT SETUP" : "COMPLETE YOUR ACCOUNT"}
+        </div>
+        <h2>
+          One quick step
+          <br />
+          <em>before we begin.</em>
+        </h2>
+        <p>
+          Signed in as <strong>{session.user.email}</strong>. Please fill these details to continue.
+        </p>
         <form onSubmit={submit}>
-          <label>Full name<input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" /></label>
-          <label>WhatsApp / Phone number<input required inputMode="tel" pattern="[0-9+() -]{10,15}" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit number" /></label>
-          {isGoogle && <label>Create password<input required minLength={8} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" /></label>}
-          {isPartner ? (
-            <label>Agency Invitation Code<input required value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Code given by BarterKartale" /></label>
-          ) : (
-            <label>Referral Code <span className="optional-tag">(optional)</span><input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g. BK-A1B2C3" /></label>
+          <label>
+            Full name
+            <input
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+            />
+          </label>
+          <label>
+            WhatsApp / Phone number
+            <input
+              required
+              inputMode="tel"
+              pattern="[0-9+() -]{10,15}"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              placeholder="10-digit number"
+            />
+          </label>
+          {isGoogle && (
+            <label>
+              Create password
+              <input
+                required
+                minLength={8}
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 8 characters"
+              />
+            </label>
           )}
-          <button className="primary-button full-button" disabled={loading}>{loading ? "Saving securely…" : "Complete setup"} <ArrowRight size={16} /></button>
+          {isPartner ? (
+            <label>
+              Agency Invitation Code
+              <input
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="Code given by BarterKartale"
+              />
+            </label>
+          ) : (
+            <label>
+              Referral Code <span className="optional-tag">(optional)</span>
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="e.g. BK-A1B2C3"
+              />
+            </label>
+          )}
+          <button className="primary-button full-button" disabled={loading}>
+            {loading ? "Saving securely…" : "Complete setup"} <ArrowRight size={16} />
+          </button>
         </form>
       </div>
     </div>
@@ -353,29 +649,64 @@ export function ReferralCard({ code }: { code: string | null }) {
     <div className="referral-card">
       <div className="section-kicker">YOUR REFERRAL CODE</div>
       <div className="referral-code">{code}</div>
-      <p>{count} friend{count === 1 ? "" : "s"} joined with your code.</p>
+      <p>
+        {count} friend{count === 1 ? "" : "s"} joined with your code.
+      </p>
       <div className="referral-actions">
-        <button className="text-button" onClick={() => { void navigator.clipboard.writeText(link); setCopied(true); }}><Copy size={14} /> {copied ? "Copied!" : "Copy link"}</button>
-        <a className="text-button" target="_blank" rel="noreferrer" href={`https://wa.me/?text=${encodeURIComponent(`Join BarterKartale with my code ${code}: ${link}`)}`}><Share2 size={14} /> Share on WhatsApp</a>
+        <button
+          className="text-button"
+          onClick={() => {
+            void navigator.clipboard.writeText(link);
+            setCopied(true);
+          }}
+        >
+          <Copy size={14} /> {copied ? "Copied!" : "Copy link"}
+        </button>
+        <a
+          className="text-button"
+          target="_blank"
+          rel="noreferrer"
+          href={`https://wa.me/?text=${encodeURIComponent(`Join BarterKartale with my code ${code}: ${link}`)}`}
+        >
+          <Share2 size={14} /> Share on WhatsApp
+        </a>
       </div>
     </div>
   );
 }
 
 /* ---------- Partner pending screen ---------- */
-export function PartnerPendingScreen({ reviewEta, onSignOut }: { reviewEta: string | null; onSignOut: () => void }) {
+export function PartnerPendingScreen({
+  reviewEta,
+  onSignOut,
+}: {
+  reviewEta: string | null;
+  onSignOut: () => void;
+}) {
   const eta = reviewEta ? new Date(reviewEta) : new Date(Date.now() + 2 * 3600 * 1000);
-  const ist = eta.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" });
+  const ist = eta.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "numeric",
+    month: "short",
+  });
   return (
     <section className="section-wrap console-page">
       <div className="pending-card">
         <Clock3 size={30} />
         <div className="section-kicker">ACCOUNT UNDER REVIEW</div>
-        <h1>Almost <em>there.</em></h1>
-        <p>Account evaluation window: 2 to 4 hours. Please re-authenticate after <strong>{ist} IST</strong>.</p>
-        <button className="text-button" onClick={onSignOut}><LockKeyhole size={14} /> Sign out</button>
+        <h1>
+          Almost <em>there.</em>
+        </h1>
+        <p>
+          Account evaluation window: 2 to 4 hours. Please re-authenticate after{" "}
+          <strong>{ist} IST</strong>.
+        </p>
+        <button className="text-button" onClick={onSignOut}>
+          <LockKeyhole size={14} /> Sign out
+        </button>
       </div>
     </section>
   );
 }
-

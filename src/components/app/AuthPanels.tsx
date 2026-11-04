@@ -62,7 +62,7 @@ export function GoogleAccessPanel({ onError }: { onError: (message: string) => v
     window.sessionStorage.setItem("bk_after_login", "/dashboard");
     // Keep the OAuth callback on the origin where the user started sign-in.
     // This avoids sending Vercel previews to a different app or provider configuration.
-    const redirectUri = `${window.location.origin}/auth/callback`;
+    const redirectUri = window.location.origin;
     const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: redirectUri });
     if (result.error) {
       setLoading(false);
@@ -159,7 +159,7 @@ export function SignUpPanel({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: window.location.origin,
         data: { display_name: name, mobile_number: mobile },
       },
     });
